@@ -1,0 +1,2950 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "TwitterAPI.io the most stable/fastest/cheapest twitter api.",
+    "description": "Provide the most stable/fastest/cheapest twitter api.",
+    "license": {
+      "name": "MIT"
+    },
+    "version": "1.0.0"
+  },
+  "servers": [{ "url": "https://api.twitterapi.io" }],
+  "security": [{ "ApiKeyAuth": [] }],
+  "paths": {
+    "/twitter/user/info": {
+      "get": {
+        "description": "Get unser info by screen name",
+        "parameters": [
+          {
+            "name": "userName",
+            "in": "query",
+            "description": "The screen name of the user",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/UserInfo"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/trends": {
+      "get": {
+        "description": "Get trends by woeid",
+        "parameters": [
+          {
+            "name": "woeid",
+            "in": "query",
+            "required": true,
+            "description": "The woeid of the location. eg. 2418046. Woeid list: https://gist.github.com/tedyblood/5bb5a9f78314cc1f478b3dd7cde790b9",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "description": "The number of trends to return. Default is 30. Min is 30.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trends",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "trends": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Trend"
+                      },
+                      "description": "Array of trends"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/user/batch_info_by_ids": {
+      "get": {
+        "description": "Batch get user info by user ids. Pricing:\n\n- Single user request: 18 credits per user\n- Bulk request (100+ users): 10 credits per user\n\nNote: For cost optimization, we recommend batching requests when fetching multiple user profiles.",
+        "parameters": [
+          {
+            "name": "userIds",
+            "in": "query",
+            "description": "The user ids to get.eg. 1234567890,1234567891,1234567892. Use comma to separate multiple user ids",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User infos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "users": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserInfo"
+                      },
+                      "description": "Array of user infos"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/user/last_tweets": {
+      "get": {
+        "description": "Retrieve tweets by user name.Sort by created_at. Results are paginated, with each page returning up to 20 tweets.This API will not return the tweets the user replied to. If you want to get the reply tweets, please use the advanced search API.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "user id of the user.userId is recommended, could be more stable and faster than userName.userId and userName are mutually exclusive. If both are provided, userId will be used.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "userName",
+            "in": "query",
+            "description": "screen name of the user.userId and userName are mutually exclusive. If both are provided, userId will be used.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The cursor to paginate through the results. First page is \"\".",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tweets response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tweets": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tweet"
+                      },
+                      "description": "Array of tweets"
+                    },
+                    "has_next_page": {
+                      "type": "boolean",
+                      "description": "Indicates if there are more results available"
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor for fetching the next page of results"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  },
+                  "required": [
+                    "tweets",
+                    "status",
+                    "message",
+                    "has_next_page",
+                    "next_cursor"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/tweets": {
+      "get": {
+        "description": "get tweet by tweet ids",
+        "parameters": [
+          {
+            "name": "tweet_ids",
+            "in": "query",
+            "description": "The tweet ids to get.eg. 1846987139428634858,1866332309399781537,1868244766405870076. Use comma to separate multiple tweet ids",
+            "required": true,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tweets response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tweets": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tweet"
+                      },
+                      "description": "Array of tweets"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  },
+                  "required": ["tweets", "status", "message"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/tweet/replies": {
+      "get": {
+        "description": "get tweet replies by tweet id.Each page returns exactly 20 replies. Use cursor for pagination. Order by reply time desc",
+        "parameters": [
+          {
+            "name": "tweetId",
+            "in": "query",
+            "description": "The tweet ID to get. Must be an original tweet (not a reply to another tweet) and should be the first tweet in a thread.. eg. 1846987139428634858",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "sinceTime",
+            "in": "query",
+            "description": "On or after a specified unix timestamp in seconds.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "required": false
+          },
+          {
+            "name": "untilTime",
+            "in": "query",
+            "description": "Before a specified unix timestamp in seconds.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "required": false
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The cursor to paginate through the results. First page is \"\".",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tweet replies response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "replies": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tweet"
+                      },
+                      "description": "Array of tweets"
+                    },
+                    "has_next_page": {
+                      "type": "boolean",
+                      "description": "Indicates if there are more results available. If true, use next_cursor to fetch the next page. Warning: Due to Twitter API inconsistency, has_more might return true even when no additional data exists. In such cases, subsequent requests will return empty results - this is a known platform limitation."
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor for fetching the next page of results"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/tweet/thread_context": {
+      "get": {
+        "description": "Get the thread context of a tweet.Suppose a tweet thread consists of t1, t2 (replying to t1), t3 (replying to t2), and t4, t5, t6 (all replying to t3). If we provide an API where you input t3 and receive t1, t2, t3, t4, t5, t6.Pagination is supported.The pagination size cannot be set (due to Twitter's limitations), and the data returned per page is not fixed.",
+        "parameters": [
+          {
+            "name": "tweetId",
+            "in": "query",
+            "description": "The tweet ID to get. Can be a reply tweet or a original tweet.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The cursor to paginate through the results. First page is \"\".",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tweet replies response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "replies": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tweet"
+                      },
+                      "description": "Array of tweets"
+                    },
+                    "has_next_page": {
+                      "type": "boolean",
+                      "description": "Indicates if there are more results available. If true, use next_cursor to fetch the next page. Warning: Due to Twitter API inconsistency, has_more might return true even when no additional data exists. In such cases, subsequent requests will return empty results - this is a known platform limitation."
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor for fetching the next page of results"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/tweet/quotes": {
+      "get": {
+        "description": "get tweet quotes by tweet id.Each page returns exactly 20 quotes. Use cursor for pagination. Order by quote time desc",
+        "parameters": [
+          {
+            "name": "tweetId",
+            "in": "query",
+            "description": "The tweet ID to get. eg. 1846987139428634858",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "sinceTime",
+            "in": "query",
+            "description": "On or after a specified unix timestamp in seconds.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "required": false
+          },
+          {
+            "name": "untilTime",
+            "in": "query",
+            "description": "Before a specified unix timestamp in seconds.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "required": false
+          },
+          {
+            "name": "includeReplies",
+            "in": "query",
+            "description": "Whether to include replies in the results. Default is True.",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "required": false
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The cursor to paginate through the results. First page is \"\".",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tweet quotes response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tweets": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tweet"
+                      },
+                      "description": "Array of tweets"
+                    },
+                    "has_next_page": {
+                      "type": "boolean",
+                      "description": "Indicates if there are more results available. If true, use next_cursor to fetch the next page. Warning: Due to Twitter API inconsistency, has_more might return true even when no additional data exists. In such cases, subsequent requests will return empty results - this is a known platform limitation."
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor for fetching the next page of results"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/user/mentions": {
+      "get": {
+        "description": "get tweet mentions by user screen name.Each page returns exactly 20 mentions. Use cursor for pagination. Order by mention time desc",
+        "parameters": [
+          {
+            "name": "userName",
+            "in": "query",
+            "description": "The user screen name to get. eg. kaitoEasyApi",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "sinceTime",
+            "in": "query",
+            "description": "On or after a specified unix timestamp in seconds.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "required": false
+          },
+          {
+            "name": "untilTime",
+            "in": "query",
+            "description": "Before a specified unix timestamp in seconds.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "required": false
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The cursor to paginate through the results. First page is \"\".",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tweet quotes response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tweets": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tweet"
+                      },
+                      "description": "Array of tweets"
+                    },
+                    "has_next_page": {
+                      "type": "boolean",
+                      "description": "Indicates if there are more results available. If true, use next_cursor to fetch the next page. Warning: Due to Twitter API inconsistency, has_more might return true even when no additional data exists. In such cases, subsequent requests will return empty results - this is a known platform limitation."
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor for fetching the next page of results"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/list/tweets": {
+      "get": {
+        "description": "get tweets by list id.Each page returns exactly 20 tweets. Use cursor for pagination. Order by tweet time desc",
+        "parameters": [
+          {
+            "name": "listId",
+            "in": "query",
+            "description": "The list ID to get eg. 1846987139428634858",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "sinceTime",
+            "in": "query",
+            "description": "On or after a specified unix timestamp in seconds.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "required": false
+          },
+          {
+            "name": "untilTime",
+            "in": "query",
+            "description": "Before a specified unix timestamp in seconds.",
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "required": false
+          },
+          {
+            "name": "includeReplies",
+            "in": "query",
+            "description": "Whether to include replies in the results. Default is True.",
+            "schema": {
+              "type": "boolean",
+              "default": true
+            },
+            "required": false
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The cursor to paginate through the results. First page is \"\".",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tweet quotes response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tweets": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tweet"
+                      },
+                      "description": "Array of tweets"
+                    },
+                    "has_next_page": {
+                      "type": "boolean",
+                      "description": "Indicates if there are more results available. If true, use next_cursor to fetch the next page. Warning: Due to Twitter API inconsistency, has_more might return true even when no additional data exists. In such cases, subsequent requests will return empty results - this is a known platform limitation."
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor for fetching the next page of results"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/tweet/retweeters": {
+      "get": {
+        "description": "get tweet retweeters by tweet id.Each page returns about 100 retweeters. Use cursor for pagination. Order by retweet time desc",
+        "parameters": [
+          {
+            "name": "tweetId",
+            "in": "query",
+            "description": "The tweet ID to get. eg. 1846987139428634858",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The cursor to paginate through the results. First page is \"\".",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tweet retweeters response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "users": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserInfo"
+                      },
+                      "description": "Array of users"
+                    },
+                    "has_next_page": {
+                      "type": "boolean",
+                      "description": "Indicates if there are more results available. If true, use next_cursor to fetch the next page. Warning: Due to Twitter API inconsistency, has_more might return true even when no additional data exists. In such cases, subsequent requests will return empty results - this is a known platform limitation."
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor for fetching the next page of results"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/user/followers": {
+      "get": {
+        "description": "Get user followers in reverse chronological order (newest first). Returns exactly 200 followers per page, sorted by follow date. Most recent followers appear on the first page. Use cursor for pagination through the complete followers list.",
+        "parameters": [
+          {
+            "name": "userName",
+            "in": "query",
+            "description": "screen name of the user",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The cursor to paginate through the results. First page is \"\".",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "followers": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserInfo"
+                      },
+                      "description": "Array of followers"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/user/followings": {
+      "get": {
+        "description": "Get user followings. Each page returns exactly 200 followings. Use cursor for pagination.",
+        "parameters": [
+          {
+            "name": "userName",
+            "in": "query",
+            "description": "screen name of the user",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The cursor to paginate through the results. First page is \"\".",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User followings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "followings": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserInfo"
+                      },
+                      "description": "Array of followings"
+                    },
+                    "has_next_page": {
+                      "type": "boolean",
+                      "description": "Indicates if there are more results available"
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor for fetching the next page of results"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/user/check_follow_relationship": {
+      "get": {
+        "description": "Check if the user is following/followed by the target user. Trial operation price: 100 credits per call.",
+        "parameters": [
+          {
+            "name": "source_user_name",
+            "in": "query",
+            "description": "screen name of the source user",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "target_user_name",
+            "in": "query",
+            "description": "screen name of the target user",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Check follow relationship response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "following": {
+                          "type": "boolean",
+                          "description": "Whether the source user is following the target user"
+                        },
+                        "followed_by": {
+                          "type": "boolean",
+                          "description": "Whether the source user is followed by the target user"
+                        }
+                      }
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/tweet/advanced_search": {
+      "get": {
+        "description": "Advanced search for tweets.Each page returns exactly about 20 tweets. Use cursor for pagination.",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "description": "The query to search for.eg.  \"AI\"  OR \"Twitter\" from:elonmusk since:2021-12-31_23:59:59_UTC . Get more examples from https://github.com/igorbrigadir/twitter-advanced-search ",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "queryType",
+            "in": "query",
+            "description": "The query type to search for.eg.  \"Latest\"  OR \"Top\"",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["Latest", "Top"],
+              "default": "Latest"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The cursor to paginate through the results. First page is \"\".",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tweets response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tweets": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tweet"
+                      },
+                      "description": "Array of tweets"
+                    },
+                    "has_next_page": {
+                      "type": "boolean",
+                      "description": "Indicates if there are more results available"
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor for fetching the next page of results"
+                    }
+                  },
+                  "required": ["tweets", "has_next_page", "next_cursor"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/login_by_email_or_username": {
+      "post": {
+        "description": "Login Step 1: by email or username.Recommend to use email.Trial operation price: $0.003 per call.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["username_or_email", "password"],
+                "properties": {
+                  "username_or_email": {
+                    "type": "string",
+                    "description": "The email or username of the user"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "The password of the user"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "hint": {
+                      "type": "string",
+                      "description": "Hint of the login.eg. \"Please use second endpoint /login_2fa to continue login.\""
+                    },
+                    "login_data": {
+                      "type": "string",
+                      "description": "Use this data to call /twitter/login_2fa to continue login."
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error"
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/login_by_2fa": {
+      "post": {
+        "description": "Login Step 2: by 2fa code.Trial operation price: $0.003 per call.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["login_data", "2fa_code"],
+                "properties": {
+                  "login_data": {
+                    "type": "string",
+                    "description": "The login data returned by /twitter/login_by_email_or_username"
+                  },
+                  "2fa_code": {
+                    "type": "string",
+                    "description": "The 2fa code of the user"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login Step 2(2fa) response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "session": {
+                      "type": "string",
+                      "description": "The session of the login.Use this session to call other endpoints.eg. /twitter/create_tweet /twitter/like_tweet"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error"
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    },
+                    "user": {
+                      "type": "object",
+                      "description": "The user info of the login.",
+                      "properties": {
+                        "id_str": {
+                          "type": "string",
+                          "description": "The id of the user"
+                        },
+                        "screen_name": {
+                          "type": "string",
+                          "description": "The screen name of the user"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The name of the user"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/create_tweet": {
+      "post": {
+        "description": "Create a tweet.Need to login first.Trial operation price: $0.001 per call.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["auth_session", "tweet_text"],
+                "properties": {
+                  "auth_session": {
+                    "type": "string",
+                    "description": "The session of the login. It's returned by /twitter/login_by_2fa"
+                  },
+                  "tweet_text": {
+                    "type": "string",
+                    "description": "The text of the tweet."
+                  },
+                  "quote_tweet_id": {
+                    "type": "string",
+                    "description": "The id of the tweet to quote.Optional"
+                  },
+                  "in_reply_to_tweet_id": {
+                    "type": "string",
+                    "description": "The id of the tweet to reply to.Optional"
+                  },
+                  "media_id": {
+                    "type": "string",
+                    "description": "The id of the media to attach.Optional"
+                  },
+                  "proxy": {
+                    "type": "string",
+                    "description": "The proxy to use.Optional"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Create tweet response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error"
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    },
+                    "data": {
+                      "type": "object",
+                      "description": "The data of the tweet",
+                      "properties": {
+                        "create_tweet": {
+                          "type": "object",
+                          "description": "The data of the tweet",
+                          "properties": {
+                            "tweet_result": {
+                              "type": "object",
+                              "description": "The result of the tweet",
+                              "properties": {
+                                "result": {
+                                  "type": "object",
+                                  "description": "The result of the tweet",
+                                  "properties": {
+                                    "rest_id": {
+                                      "type": "string",
+                                      "description": "The id of the tweet"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/like_tweet": {
+      "post": {
+        "description": "Like a tweet.Need to login first. Trial operation price: $0.001 per call.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["auth_session", "tweet_id"],
+                "properties": {
+                  "auth_session": {
+                    "type": "string",
+                    "description": "The session of the login. It's returned by /twitter/login_by_2fa"
+                  },
+                  "tweet_id": {
+                    "type": "string",
+                    "description": "The id of the tweet to like"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Like tweet response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error"
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/list/add_member": {
+      "post": {
+        "description": "add member to a list.Need to login first. Trial operation price: $0.001 per call.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["auth_session", "list_id"],
+                "properties": {
+                  "auth_session": {
+                    "type": "string",
+                    "description": "The session of the login. It's returned by /twitter/login_by_2fa"
+                  },
+                  "list_id": {
+                    "type": "string",
+                    "description": "The id of the list"
+                  },
+                  "user_id": {
+                    "type": "string",
+                    "description": "The id of the user to add.user_id and user_name must be set at least one."
+                  },
+                  "user_name": {
+                    "type": "string",
+                    "description": "The name of the user to add.user_id and user_name must be set at least one."
+                  },
+                  "proxy": {
+                    "type": "string",
+                    "description": "The proxy to use.Optional,but recommend to set."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Add user to list response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error"
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/list/remove_member": {
+      "post": {
+        "description": "remove member from a list.Need to login first. Trial operation price: $0.001 per call.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["auth_session", "list_id"],
+                "properties": {
+                  "auth_session": {
+                    "type": "string",
+                    "description": "The session of the login. It's returned by /twitter/login_by_2fa"
+                  },
+                  "list_id": {
+                    "type": "string",
+                    "description": "The id of the list"
+                  },
+                  "user_id": {
+                    "type": "string",
+                    "description": "The id of the user to add.user_id and user_name must be set at least one."
+                  },
+                  "user_name": {
+                    "type": "string",
+                    "description": "The name of the user to add.user_id and user_name must be set at least one."
+                  },
+                  "proxy": {
+                    "type": "string",
+                    "description": "The proxy to use.Optional,but recommend to set."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Remove user from list response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error"
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/upload_image": {
+      "post": {
+        "description": "upload image to twitter.Need to login first. Trial operation price: $0.001 per call.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["auth_session", "list_id"],
+                "properties": {
+                  "auth_session": {
+                    "type": "string",
+                    "description": "The session of the login. It's returned by /twitter/login_by_2fa"
+                  },
+                  "image_url": {
+                    "type": "string",
+                    "description": "The url of the image to upload"
+                  },
+                  "proxy": {
+                    "type": "string",
+                    "description": "The proxy to use.Optional,but recommend to set."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload image response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error"
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    },
+                    "media_id": {
+                      "type": "string",
+                      "description": "The id of the uploaded image"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/plants/{id}": {
+      "delete": {
+        "description": "Deletes a single plant based on the ID supplied",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID of plant to delete",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Plant deleted",
+            "content": {}
+          },
+          "400": {
+            "description": "unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/oapi/tweet_filter/get_rules": {
+      "get": {
+        "description": "Get all tweet filter rules.Rule can be used in webhook and websocket.You can also modify the rule in our web page.",
+        "responses": {
+          "200": {
+            "description": "Tweet filter rules response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rules": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TweetFilterRule"
+                      },
+                      "description": "Array of tweet filter rules"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  },
+                  "required": ["rules", "status"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/oapi/tweet_filter/add_rule": {
+      "post": {
+        "description": "Add a tweet filter rule. Default rule is not activated.You must call update_rule to activate the rule.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["tag", "value", "interval_seconds"],
+                "properties": {
+                  "tag": {
+                    "type": "string",
+                    "description": "Custom tag to identify the rule.Must be set.Max length is 255"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Rule to filter tweets.eg \"from:elonmusk OR from:kaitoeasyapi\".Must be set.Max length is 255"
+                  },
+                  "interval_seconds": {
+                    "type": "number",
+                    "description": "Interval to check tweets.Must be set.Min value is 100.Max value is 86400 ()"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tweet filter rule add response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "rule_id": {
+                      "type": "string",
+                      "description": "ID of the added rule"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  },
+                  "required": ["rule_id", "status", "msg"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/oapi/tweet_filter/update_rule": {
+      "post": {
+        "description": "Update a tweet filter rule. You must set all parameters.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["rule_id", "tag", "value", "interval_seconds"],
+                "properties": {
+                  "rule_id": {
+                    "type": "string",
+                    "description": "ID of the rule to update.Must be set"
+                  },
+                  "tag": {
+                    "type": "string",
+                    "description": "Custom tag to identify the rule.Must be set.Max length is 255"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Rule to filter tweets.eg \"from:elonmusk OR from:kaitoeasyapi\".Must be set.Max length is 255"
+                  },
+                  "interval_seconds": {
+                    "type": "number",
+                    "description": "Interval to check tweets.Must be set.Min value is 0.1.Max value is 86400 ()"
+                  },
+                  "is_effect": {
+                    "type": "integer",
+                    "description": "Whether the rule is effective.Must be set.1 means effective, 0 means not effective.Default value is 0",
+                    "enum": [0, 1]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tweet filter rule update response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  },
+                  "required": ["rule_id", "status", "msg"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/oapi/tweet_filter/delete_rule": {
+      "delete": {
+        "description": "Delete a tweet filter rule. You must set all parameters.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rule_id": {
+                    "type": "string",
+                    "description": "ID of the rule to delete.Must be set"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tweet filter rule delete response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  },
+                  "required": ["status"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/community/info": {
+      "get": {
+        "description": "Get community info by community id. Price: 20 credits per call. Note: This API is a bit slow, we are still optimizing it.",
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "query",
+            "description": "id of the community",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Community info response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "community_info": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "description": "ID of the community"
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "Name of the community"
+                        },
+                        "description": {
+                          "type": "string",
+                          "description": "Description of the community"
+                        },
+                        "question": {
+                          "type": "string",
+                          "description": "Community question"
+                        },
+                        "member_count": {
+                          "type": "integer",
+                          "description": "Number of members in the community"
+                        },
+                        "moderator_count": {
+                          "type": "integer",
+                          "description": "Number of moderators in the community"
+                        },
+                        "created_at": {
+                          "type": "string",
+                          "description": "Creation date of the community"
+                        },
+                        "join_policy": {
+                          "type": "string",
+                          "description": "Join policy of the community"
+                        },
+                        "invites_policy": {
+                          "type": "string",
+                          "description": "Invites policy of the community"
+                        },
+                        "is_nsfw": {
+                          "type": "boolean",
+                          "description": "Whether the community is NSFW"
+                        },
+                        "is_pinned": {
+                          "type": "boolean",
+                          "description": "Whether the community is pinned"
+                        },
+                        "role": {
+                          "type": "string",
+                          "description": "User's role in the community"
+                        },
+                        "primary_topic": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "ID of the primary topic"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "Name of the primary topic"
+                            }
+                          }
+                        },
+                        "banner_url": {
+                          "type": "string",
+                          "description": "URL of the community banner"
+                        },
+                        "search_tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Search tags for the community"
+                        },
+                        "rules": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "ID of the rule"
+                              },
+                              "name": {
+                                "type": "string",
+                                "description": "Name of the rule"
+                              },
+                              "description": {
+                                "type": "string",
+                                "description": "Description of the rule"
+                              }
+                            }
+                          },
+                          "description": "Community rules"
+                        },
+                        "creator": {
+                          "$ref": "#/components/schemas/UserInfo"
+                        },
+                        "admin": {
+                          "$ref": "#/components/schemas/UserInfo"
+                        },
+                        "members_preview": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "description": "Member information with same structure as creator"
+                          },
+                          "description": "Preview of community members"
+                        }
+                      }
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request: success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request, error message if status is error"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/community/members": {
+      "get": {
+        "description": "Get members of a community. Page size is 20.",
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "query",
+            "description": "id of the community",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Community members response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserInfo"
+                      },
+                      "description": "Members of the community"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request: success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request, error message if status is error"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/community/moderators": {
+      "get": {
+        "description": "Get moderators of a community. Page size is 20.",
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "query",
+            "description": "id of the community",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Community moderator response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserInfo"
+                      },
+                      "description": "Moderators of the community"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request: success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request, error message if status is error"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/community/tweets": {
+      "get": {
+        "description": "Get tweets of a community. Page size is 20. Order by creation time desc. ",
+        "parameters": [
+          {
+            "name": "community_id",
+            "in": "query",
+            "description": "id of the community",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "cursor of the page",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Community info response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tweets": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tweet"
+                      },
+                      "description": "Tweets of the community"
+                    },
+                    "has_next": {
+                      "type": "boolean",
+                      "description": "Whether there is a next page"
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor of the next page"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request: success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request, error message if status is error"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/list/members": {
+      "get": {
+        "description": "Get members of a list. Page size is 20.",
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "query",
+            "description": "id of the list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "cursor of the page",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List members response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserInfo"
+                      },
+                      "description": "Members of the list"
+                    },
+                    "has_next_page": {
+                      "type": "boolean",
+                      "description": "Indicates if there are more results available"
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor for fetching the next page of results"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request: success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request, error message if status is error"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/list/followers": {
+      "get": {
+        "description": "Get followers of a list. Page size is 20.",
+        "parameters": [
+          {
+            "name": "list_id",
+            "in": "query",
+            "description": "id of the list",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "cursor of the page",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List followers of the list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "followers": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/UserInfo"
+                      },
+                      "description": "Members of the list"
+                    },
+                    "has_next_page": {
+                      "type": "boolean",
+                      "description": "Indicates if there are more results available"
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor for fetching the next page of results"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request: success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "msg": {
+                      "type": "string",
+                      "description": "Message of the request, error message if status is error"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "components": {
+    "schemas": {
+      "Plant": {
+        "required": ["name"],
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "The name of the plant",
+            "type": "string"
+          },
+          "tag": {
+            "description": "Tag to specify the type",
+            "type": "string"
+          }
+        }
+      },
+
+      "UserInfo": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["user"]
+          },
+          "userName": {
+            "type": "string",
+            "description": "The username of the Twitter user"
+          },
+          "url": {
+            "type": "string",
+            "description": "The x.com URL of the user's profile"
+          },
+          "id": {
+            "type": "string",
+            "description": "The unique identifier of the user"
+          },
+          "name": {
+            "type": "string",
+            "description": "The display name of the user"
+          },
+          "isBlueVerified": {
+            "type": "boolean",
+            "description": "Whether the user has Twitter Blue verification"
+          },
+          "verifiedType": {
+            "type": "string",
+            "description": "The type of verification. eg. \"government\" ,can be empty"
+          },
+          "profilePicture": {
+            "type": "string",
+            "description": "URL of the user's profile picture"
+          },
+          "coverPicture": {
+            "type": "string",
+            "description": "URL of the user's cover picture"
+          },
+          "description": {
+            "type": "string",
+            "description": "The user's profile description"
+          },
+          "location": {
+            "type": "string",
+            "description": "The user's location.for example: 東京の端っこ . may be empty"
+          },
+          "followers": {
+            "type": "integer",
+            "description": "Number of followers"
+          },
+          "following": {
+            "type": "integer",
+            "description": "Number of accounts following"
+          },
+          "canDm": {
+            "type": "boolean",
+            "description": "Whether the user can receive DMs"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the account was created.for example: Thu Dec 13 08:41:26 +0000 2007"
+          },
+          "favouritesCount": {
+            "type": "integer",
+            "description": "Number of favorites"
+          },
+          "hasCustomTimelines": {
+            "type": "boolean",
+            "description": "Whether the user has custom timelines"
+          },
+          "isTranslator": {
+            "type": "boolean",
+            "description": "Whether the user is a translator"
+          },
+          "mediaCount": {
+            "type": "integer",
+            "description": "Number of media posts"
+          },
+          "statusesCount": {
+            "type": "integer",
+            "description": "Number of status updates"
+          },
+          "withheldInCountries": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Countries where the account is withheld"
+          },
+          "affiliatesHighlightedLabel": {
+            "type": "object"
+          },
+          "possiblySensitive": {
+            "type": "boolean",
+            "description": "Whether the account may contain sensitive content"
+          },
+          "pinnedTweetIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "IDs of pinned tweets"
+          },
+          "isAutomated": {
+            "type": "boolean",
+            "description": "Whether the account is automated"
+          },
+          "automatedBy": {
+            "type": "string",
+            "description": "The account that automated the account"
+          },
+          "unavailable": {
+            "type": "boolean",
+            "description": "Whether the account is unavailable"
+          },
+          "message": {
+            "type": "string",
+            "description": "The message of the account.eg. \"This account is unavailable\" or \"This account is suspended\""
+          },
+          "unavailableReason": {
+            "type": "string",
+            "description": "The reason the account is unavailable.eg. \"suspended\" "
+          },
+          "profile_bio": {
+            "type": "object",
+            "properties": {
+              "description": {
+                "type": "string"
+              },
+              "entities": {
+                "type": "object",
+                "properties": {
+                  "description": {
+                    "type": "object",
+                    "properties": {
+                      "urls": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "display_url": {
+                              "type": "string"
+                            },
+                            "expanded_url": {
+                              "type": "string"
+                            },
+                            "indices": {
+                              "type": "array",
+                              "items": {
+                                "type": "integer"
+                              }
+                            },
+                            "url": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "url": {
+                    "type": "object",
+                    "properties": {
+                      "urls": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "display_url": {
+                              "type": "string"
+                            },
+                            "expanded_url": {
+                              "type": "string"
+                            },
+                            "indices": {
+                              "type": "array",
+                              "items": {
+                                "type": "integer"
+                              }
+                            },
+                            "url": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+
+      "Trend": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name of the trend"
+          },
+          "target": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string",
+                "description": "The query of the target. eg. \"#elonmusk\""
+              }
+            }
+          },
+          "rank": {
+            "type": "integer",
+            "description": "The rank of the trend"
+          },
+          "meta_description": {
+            "type": "string",
+            "description": "The meta description of the trend.eg. \"17.7K posts\".may be empty."
+          }
+        }
+      },
+
+      "Tweet": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["tweet"]
+          },
+          "id": {
+            "type": "string",
+            "description": "The ID of the tweet"
+          },
+          "url": {
+            "type": "string",
+            "description": "The URL of the tweet"
+          },
+          "text": {
+            "type": "string",
+            "description": "The text of the tweet"
+          },
+          "source": {
+            "type": "string",
+            "description": "The source of the tweet.eg. \"Twitter for iPhone\""
+          },
+          "retweetCount": {
+            "type": "integer",
+            "description": "The number of times the tweet has been retweeted"
+          },
+          "replyCount": {
+            "type": "integer",
+            "description": "The number of times the tweet has been replied to"
+          },
+          "likeCount": {
+            "type": "integer",
+            "description": "The number of times the tweet has been liked"
+          },
+          "quoteCount": {
+            "type": "integer",
+            "description": "The number of times the tweet has been quoted"
+          },
+          "viewCount": {
+            "type": "integer",
+            "description": "The number of times the tweet has been viewed"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "The date and time the tweet was created.eg. Tue Dec 10 07:00:30 +0000 2024"
+          },
+          "lang": {
+            "type": "string",
+            "description": "The language of the tweet.eg. \"en\".may be empty"
+          },
+          "bookmarkCount": {
+            "type": "integer",
+            "description": "The number of times the tweet has been bookmarked"
+          },
+          "isReply": {
+            "type": "boolean",
+            "description": "Indicates if the tweet is a reply"
+          },
+          "inReplyToId": {
+            "type": "string",
+            "description": "The ID of the tweet being replied to.may be empty"
+          },
+          "conversationId": {
+            "type": "string",
+            "description": "The ID of the conversation the tweet is part of.may be empty"
+          },
+          "inReplyToUserId": {
+            "type": "string",
+            "description": "The ID of the user being replied to.may be empty"
+          },
+          "inReplyToUsername": {
+            "type": "string",
+            "description": "The username of the user being replied to.may be empty"
+          },
+          "author": {
+            "$ref": "#/components/schemas/UserInfo",
+            "description": "The user who posted the tweet"
+          },
+          "entities": {
+            "$ref": "#/components/schemas/TweetEntities",
+            "description": "The entities in the tweet.eg. hashtags,urls,mentions"
+          },
+          "quoted_tweet": {
+            "$ref": "#/components/schemas/Tweet",
+            "description": "The tweet being quoted.may be null"
+          },
+          "retweeted_tweet": {
+            "$ref": "#/components/schemas/Tweet",
+            "description": "The tweet being retweeted.may be null"
+          }
+        }
+      },
+      "TweetEntities": {
+        "type": "object",
+        "properties": {
+          "hashtags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "indices": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  }
+                },
+                "text": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "urls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "display_url": {
+                  "type": "string"
+                },
+                "expanded_url": {
+                  "type": "string"
+                },
+                "indices": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  }
+                },
+                "url": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "user_mentions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id_str": {
+                  "type": "string",
+                  "description": "The ID of the user being mentioned"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the user being mentioned"
+                },
+                "screen_name": {
+                  "type": "string",
+                  "description": "The screen name of the user being mentioned"
+                }
+              }
+            }
+          }
+        }
+      },
+      "NewPlant": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Plant"
+          },
+          {
+            "required": ["id"],
+            "type": "object",
+            "properties": {
+              "id": {
+                "description": "Identification number of the plant",
+                "type": "integer",
+                "format": "int64"
+              }
+            }
+          }
+        ]
+      },
+
+      "TweetFilterRule": {
+        "type": "object",
+        "properties": {
+          "rule_id": {
+            "type": "string",
+            "description": "ID of the rule"
+          },
+          "tag": {
+            "type": "string",
+            "description": "Custom tag to identify the rule.Max length is 255"
+          },
+          "value": {
+            "type": "string",
+            "description": "Rule to filter tweets.eg \"from:elonmusk OR from:kaitoeasyapi\".Max length is 255"
+          },
+          "interval_seconds": {
+            "type": "number",
+            "description": "Interval to check tweets.Min value is 100.Max value is 86400"
+          }
+        }
+      },
+
+      "Error": {
+        "required": ["error", "message"],
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  }
+}
