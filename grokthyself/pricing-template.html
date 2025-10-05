@@ -198,8 +198,7 @@
                         <li>Lifetime access to your data</li>
                     </ul>
 
-                    <a href="https://buy.stripe.com/3cI28q0Zm7p79Pt1DjeNh43" class="papyrus-button" id="premium-button"
-                        target="_blank">
+                    <a href="#" class="papyrus-button" id="premium-button" target="_blank">
                         Upgrade Now
                     </a>
                 </div>
@@ -250,6 +249,7 @@
         // Get user data from window.data injected by the server
         const userData = window.data || {};
 
+
         // Update UI based on user's premium status
         function updatePricingUI() {
             const freeCard = document.getElementById('free-card');
@@ -281,6 +281,7 @@
                 freeCard.classList.add('current-plan');
                 freeButton.textContent = 'Current Plan';
                 freeButton.classList.add('current');
+                premiumButton.href = `https://buy.stripe.com/3cI28q0Zm7p79Pt1DjeNh43?client_reference_id=${userData.username}`;
 
                 // Add current plan badge to free
                 const currentBadge = document.createElement('div');

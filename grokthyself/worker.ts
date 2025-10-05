@@ -4,16 +4,22 @@
 import { DurableObject } from "cloudflare:workers";
 import { UserContext, withSimplerAuth } from "simplerauth-client";
 import { Queryable, studioMiddleware } from "queryable-object";
+import { withMcp } from "with-mcp";
+//@ts-ignore
+import openapi from "./openapi.json";
 //@ts-ignore
 import loginPage from "./login-template.html";
 //@ts-ignore
 import pricingTemplate from "./pricing-template.html";
+import Stripe from "stripe";
 
 const DO_NAME_PREFIX = "v4:";
 
 export interface Env {
   USER_DO: DurableObjectNamespace<UserDO>;
   X_API_KEY: string;
+  STRIPE_WEBHOOK_SIGNING_SECRET: string;
+  STRIPE_SECRET: string;
 }
 
 // Add this interface to your existing interfaces
@@ -283,6 +289,11 @@ const dashboardPage = (
                     
                     <div>
                         <h3 class="text-lg font-semibold mb-3 text-amber-800">Actions</h3>
+
+
+                        
+
+
                         <div class="space-y-3">
                             <a href="/admin" target="_blank" class="papyrus-button block text-center ${
                               stats.scrapeStatus !== "completed"
@@ -290,9 +301,10 @@ const dashboardPage = (
                                 : ""
                             }">Admin Panel</a>
                             <a href="/pricing" class="papyrus-button block text-center">Pricing</a>
-                            <a href="/${
+                            <span onclick="window.location.href='/${
                               user.username
-                            }?q=" class="papyrus-button block text-center">Posts</a>
+                            }?maxTokens=10000&q='+(prompt('Search query (optional) - Supports keywords, from:username, before:YYYY-MM-DD, after:YYYY-MM-DD, AND/OR operators')||'')" class="papyrus-button block text-center cursor-pointer">Search Posts</span>
+                            <a href="https://installthismcp.com/X%20History%20MCP?url=https%3A%2F%2Fgrokthyself.com%2Fmcp" class="papyrus-button block text-center">Install Your MCP</a>
                             <a href="/logout" class="papyrus-button block text-center bg-red-200 hover:bg-red-300">Logout</a>
                         </div>
                     </div>
@@ -582,7 +594,7 @@ export class UserDO extends DurableObject<Env> {
       return `User did not make posts public`;
     }
 
-    const maxTokens = searchQuery.maxTokens || 50000;
+    const maxTokens = searchQuery.maxTokens || 10000;
     const parsedQuery = this.parseSearchQuery(searchQuery.q || "");
 
     console.log("Parsed query:", parsedQuery);
@@ -967,94 +979,96 @@ export class UserDO extends DurableObject<Env> {
 }
 
 export default {
-  fetch: withSimplerAuth(
-    async (request: Request, env: Env, ctx: UserContext) => {
-      // Ensure required environment variables are present
-      if (!env.X_API_KEY) {
-        return new Response("X_API_KEY environment variable is required", {
-          status: 500,
-        });
-      }
-
-      const url = new URL(request.url);
-
-      // Handle login page
-      if (url.pathname === "/login") {
-        if (ctx.authenticated) {
-          return Response.redirect(url.origin + "/dashboard", 302);
-        }
-        return new Response(loginPage, {
-          headers: { "Content-Type": "text/html" },
-        });
-      }
-
-      if (url.pathname === "/admin") {
-        if (!ctx.authenticated) {
-          return Response.redirect(url.origin + "/login", 302);
-        }
-
-        try {
-          // Get user's Durable Object
-          const userDO = env.USER_DO.get(
-            env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.username)
-          );
-
-          return studioMiddleware(request, userDO.raw, {
-            dangerouslyDisableAuth: true,
+  fetch: withMcp(
+    withSimplerAuth(
+      async (request: Request, env: Env, ctx: UserContext) => {
+        // Ensure required environment variables are present
+        if (!env.X_API_KEY) {
+          return new Response("X_API_KEY environment variable is required", {
+            status: 500,
           });
-        } catch (error) {
-          console.error("Dashboard error:", error);
-          return new Response("Error loading admin", { status: 500 });
-        }
-      }
-
-      // Handle dashboard page
-      if (url.pathname === "/dashboard") {
-        if (!ctx.authenticated) {
-          return Response.redirect(url.origin + "/login", 302);
         }
 
-        try {
-          // Get user's Durable Object
-          const userDO = env.USER_DO.get(
-            env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.username)
-          );
+        const url = new URL(request.url);
 
-          // Get user stats
-          const stats: any = await userDO.getUserStats(ctx.user);
-          const dashboardHtml = dashboardPage(ctx.user, stats);
-
-          return new Response(dashboardHtml, {
+        // Handle login page
+        if (url.pathname === "/login") {
+          if (ctx.authenticated) {
+            return Response.redirect(url.origin + "/dashboard", 302);
+          }
+          return new Response(loginPage, {
             headers: { "Content-Type": "text/html" },
           });
-        } catch (error) {
-          console.error("Dashboard error:", error);
-          return new Response("Error loading dashboard", { status: 500 });
-        }
-      }
-
-      // Handle pricing page
-      if (url.pathname === "/pricing") {
-        if (!ctx.authenticated) {
-          return Response.redirect(url.origin + "/login", 302);
         }
 
-        try {
-          // Get user's Durable Object
-          const userDO = env.USER_DO.get(
-            env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.username)
-          );
+        if (url.pathname === "/admin") {
+          if (!ctx.authenticated) {
+            return Response.redirect(url.origin + "/login", 302);
+          }
 
-          // Get user stats to check premium status
-          const stats = await userDO.getUserStats(ctx.user);
+          try {
+            // Get user's Durable Object
+            const userDO = env.USER_DO.get(
+              env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.username)
+            );
 
-          // Read the pricing template
+            return studioMiddleware(request, userDO.raw, {
+              dangerouslyDisableAuth: true,
+            });
+          } catch (error) {
+            console.error("Dashboard error:", error);
+            return new Response("Error loading admin", { status: 500 });
+          }
+        }
 
-          // Inject user data into the template
-          const pricingPageWithData = pricingTemplate.replace(
-            "</body>",
-            `<script>
+        // Handle dashboard page
+        if (url.pathname === "/dashboard") {
+          if (!ctx.authenticated) {
+            return Response.redirect(url.origin + "/login", 302);
+          }
+
+          try {
+            // Get user's Durable Object
+            const userDO = env.USER_DO.get(
+              env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.username)
+            );
+
+            // Get user stats
+            const stats: any = await userDO.getUserStats(ctx.user);
+            const dashboardHtml = dashboardPage(ctx.user, stats);
+
+            return new Response(dashboardHtml, {
+              headers: { "Content-Type": "text/html" },
+            });
+          } catch (error) {
+            console.error("Dashboard error:", error);
+            return new Response("Error loading dashboard", { status: 500 });
+          }
+        }
+
+        // Handle pricing page
+        if (url.pathname === "/pricing") {
+          if (!ctx.authenticated) {
+            return Response.redirect(url.origin + "/login", 302);
+          }
+
+          try {
+            // Get user's Durable Object
+            const userDO = env.USER_DO.get(
+              env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.username)
+            );
+
+            // Get user stats to check premium status
+            const stats = await userDO.getUserStats(ctx.user);
+
+            // Read the pricing template
+
+            // Inject user data into the template
+            const pricingPageWithData = pricingTemplate.replace(
+              "</body>",
+              `<script>
         window.data = {
+          username: "${ctx.user.username}",
           isPremium: ${stats.isPremium},
           balance: ${stats.balance},
           postCount: ${stats.postCount},
@@ -1062,78 +1076,182 @@ export default {
         };
       </script>
       </body>`
+            );
+
+            return new Response(pricingPageWithData, {
+              headers: { "Content-Type": "text/html" },
+            });
+          } catch (error) {
+            console.error("Pricing page error:", error);
+            return new Response("Error loading pricing page", { status: 500 });
+          }
+        }
+
+        // assume its a username (or /search and authenticated)
+
+        try {
+          // Get query parameters
+          const query = url.searchParams.get("q") || "";
+          const maxTokensParam = url.searchParams.get("maxTokens");
+          const maxTokens = maxTokensParam
+            ? parseInt(maxTokensParam, 10)
+            : 50000;
+
+          if (maxTokens < 1 || maxTokens > 5000000) {
+            return new Response(
+              JSON.stringify({
+                error: "maxTokens must be between 1 and 5000000",
+              }),
+              {
+                status: 400,
+                headers: { "Content-Type": "application/json" },
+              }
+            );
+          }
+
+          console.log(
+            `Posts search request: q="${query}", maxTokens=${maxTokens}`
           );
 
-          return new Response(pricingPageWithData, {
-            headers: { "Content-Type": "text/html" },
+          const username =
+            url.pathname === "/search"
+              ? ctx.user?.username
+              : url.pathname.slice(1);
+
+          if (!username) {
+            return new Response("Unauthorized", { status: 401 });
+          }
+
+          // Get user's Durable Object
+          const userDO = env.USER_DO.get(
+            env.USER_DO.idFromName(DO_NAME_PREFIX + username)
+          );
+
+          // Perform search
+          const markdown = await userDO.searchPosts(ctx.user.id, {
+            q: query,
+            maxTokens,
+          });
+
+          // Return as markdown
+          return new Response(markdown, {
+            headers: {
+              "Content-Type": "text/markdown; charset=utf-8",
+              "Content-Disposition": `inline; filename="${username}.md"`,
+            },
           });
         } catch (error) {
-          console.error("Pricing page error:", error);
-          return new Response("Error loading pricing page", { status: 500 });
-        }
-      }
-
-      // assume its a username
-
-      try {
-        // Get query parameters
-        const query = url.searchParams.get("q") || "";
-        const maxTokensParam = url.searchParams.get("maxTokens");
-        const maxTokens = maxTokensParam ? parseInt(maxTokensParam, 10) : 50000;
-
-        if (maxTokens < 1 || maxTokens > 5000000) {
+          console.error("Posts search error:", error);
           return new Response(
             JSON.stringify({
-              error: "maxTokens must be between 1 and 5000000",
+              error: "Error searching posts",
+              details: error instanceof Error ? error.message : String(error),
             }),
             {
-              status: 400,
+              status: 500,
               headers: { "Content-Type": "application/json" },
             }
           );
         }
-
-        console.log(
-          `Posts search request: q="${query}", maxTokens=${maxTokens}`
-        );
-
-        const username = url.pathname.slice(1);
-
-        // Get user's Durable Object
-        const userDO = env.USER_DO.get(
-          env.USER_DO.idFromName(DO_NAME_PREFIX + username)
-        );
-
-        // Perform search
-        const markdown = await userDO.searchPosts(ctx.user.id, {
-          q: query,
-          maxTokens,
-        });
-
-        // Return as markdown
-        return new Response(markdown, {
-          headers: {
-            "Content-Type": "text/markdown; charset=utf-8",
-            "Content-Disposition": `inline; filename="${username}.md"`,
-          },
-        });
-      } catch (error) {
-        console.error("Posts search error:", error);
-        return new Response(
-          JSON.stringify({
-            error: "Error searching posts",
-            details: error instanceof Error ? error.message : String(error),
-          }),
-          {
-            status: 500,
-            headers: { "Content-Type": "application/json" },
-          }
-        );
+      },
+      {
+        isLoginRequired: false,
+        scope: "profile",
       }
-    },
+    ),
+    openapi,
     {
-      isLoginRequired: false,
-      scope: "profile",
+      authEndpoint: "/me",
+      toolOperationIds: ["search"],
+      serverInfo: { name: "X History MCP", version: "1.0.0" },
     }
   ),
 } satisfies ExportedHandler<Env>;
+
+const streamToBuffer = async (
+  readableStream: ReadableStream<Uint8Array>
+): Promise<Uint8Array> => {
+  const chunks: Uint8Array[] = [];
+  const reader = readableStream.getReader();
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+  const result = new Uint8Array(totalLength);
+
+  let position = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, position);
+    position += chunk.length;
+  }
+
+  return result;
+};
+
+async function handleStripeWebhook(
+  request: Request,
+  env: Env,
+  ctx: ExecutionContext,
+  version: string
+): Promise<Response> {
+  if (!request.body) {
+    return new Response(JSON.stringify({ error: "No body" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const rawBody = await streamToBuffer(request.body);
+  const rawBodyString = new TextDecoder().decode(rawBody);
+
+  const stripe = new Stripe(env.STRIPE_SECRET, {
+    apiVersion: "2025-03-31.basil",
+  });
+
+  const stripeSignature = request.headers.get("stripe-signature");
+  if (!stripeSignature) {
+    return new Response(JSON.stringify({ error: "No signature" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  let event: Stripe.Event;
+  try {
+    event = await stripe.webhooks.constructEventAsync(
+      rawBodyString,
+      stripeSignature,
+      env.STRIPE_WEBHOOK_SIGNING_SECRET
+    );
+  } catch (err) {
+    console.log("WEBHOOK ERR", err.message);
+    return new Response(`Webhook error: ${String(err)}`, { status: 400 });
+  }
+
+  if (event.type === "checkout.session.completed") {
+    console.log("CHECKOUT COMPLETED");
+    const session = event.data.object;
+
+    if (session.payment_status !== "paid" || !session.amount_total) {
+      return new Response("Payment not completed", { status: 400 });
+    }
+
+    const { client_reference_id, amount_total } = session;
+
+    if (!client_reference_id) {
+      return new Response("Missing client_reference_id", { status: 400 });
+    }
+
+    return new Response("Payment processed successfully", { status: 200 });
+  }
+
+  return new Response("Event not handled", { status: 200 });
+}

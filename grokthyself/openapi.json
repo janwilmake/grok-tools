@@ -1,0 +1,184 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Grok Thyself API",
+    "version": "1.0.0",
+    "description": "API for searching and retrieving X (Twitter) history data",
+    "contact": { "url": "https://grokthyself.com" }
+  },
+  "servers": [
+    { "url": "https://grokthyself.com", "description": "Production server" }
+  ],
+  "security": [{ "oauth2": [] }],
+  "paths": {
+    "/search": {
+      "get": {
+        "operationId": "search",
+        "summary": "Search user's posts",
+        "description": "Search through a user's X (Twitter) posts and return matching conversation threads in markdown format",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search query. Supports keywords, from:username, before:YYYY-MM-DD, after:YYYY-MM-DD, AND/OR operators",
+            "examples": {
+              "simple": {
+                "value": "javascript",
+                "description": "Search for posts containing 'javascript'"
+              },
+              "with_date": {
+                "value": "AI after:2024-01-01",
+                "description": "Search for posts about AI after January 1, 2024"
+              },
+              "complex": {
+                "value": "machine learning OR AI from:elonmusk before:2024-12-01",
+                "description": "Search for posts by @elonmusk about machine learning or AI before December 2024"
+              }
+            }
+          },
+          {
+            "name": "maxTokens",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 5000000,
+              "default": 10000
+            },
+            "description": "Maximum number of tokens to return in the response"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results in markdown format",
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "# Search Results\n\nQuery: `javascript`\n\nFound 3 conversation threads (estimated 1250 tokens)\n\n---\n\n# Thread\n\n@username [1234567890] (2024-01-15 ❤️ 5 🔄 2) - Just discovered a new JavaScript framework...\n\t↳@reply_user [1234567891] (2024-01-15) - Which one? There are so many!\n\n"
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - authentication required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - user has not made posts public",
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message"
+          },
+          "details": {
+            "type": "string",
+            "description": "Additional error details"
+          }
+        },
+        "required": ["error"]
+      },
+      "UserInfo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "User ID"
+          },
+          "username": {
+            "type": "string",
+            "description": "X username"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name"
+          },
+          "profile_image_url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Profile image URL"
+          }
+        },
+        "required": ["id", "username"]
+      },
+      "SearchQuery": {
+        "type": "object",
+        "properties": {
+          "q": {
+            "type": "string",
+            "description": "Search query with support for keywords, operators (AND/OR), and filters (from:, before:, after:)"
+          },
+          "maxTokens": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5000000,
+            "default": 50000,
+            "description": "Maximum number of tokens to return"
+          }
+        }
+      }
+    }
+  }
+}

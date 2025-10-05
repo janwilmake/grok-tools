@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Square Venn Diagram with 30% Overlap</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background-color: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+    }
+
+    .container {
+      text-align: center;
+    }
+
+    svg {
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <svg width="500" height="500" viewBox="0 0 500 500">
+      <defs>
+        <!-- Pattern for left image -->
+        <pattern id="leftImage" patternUnits="objectBoundingBox" width="1" height="1">
+          <image href="https://pbs.twimg.com/profile_images/1846647952267206656/lREddXdR_400x400.jpg" width="200"
+            height="200" preserveAspectRatio="xMidYMid slice" />
+        </pattern>
+
+        <!-- Pattern for right image -->
+        <pattern id="rightImage" patternUnits="objectBoundingBox" width="1" height="1">
+          <image href="https://pbs.twimg.com/profile_images/1849574174785732608/ltlLcyaT_400x400.jpg" width="200"
+            height="200" preserveAspectRatio="xMidYMid slice" />
+        </pattern>
+
+        <!-- Mask for left circle excluding overlap -->
+        <mask id="leftOnly">
+          <rect width="500" height="500" fill="black" />
+          <circle cx="190" cy="250" r="100" fill="white" />
+          <circle cx="310" cy="250" r="100" fill="black" />
+        </mask>
+
+        <!-- Mask for right circle excluding overlap -->
+        <mask id="rightOnly">
+          <rect width="500" height="500" fill="black" />
+          <circle cx="310" cy="250" r="100" fill="white" />
+          <circle cx="190" cy="250" r="100" fill="black" />
+        </mask>
+
+        <!-- Clip paths for intersection -->
+        <clipPath id="leftCircle">
+          <circle cx="190" cy="250" r="100" />
+        </clipPath>
+        <clipPath id="rightCircle">
+          <circle cx="310" cy="250" r="100" />
+        </clipPath>
+      </defs>
+
+      <!-- Left circle (non-overlapping part) -->
+      <circle cx="190" cy="250" r="100" fill="url(#leftImage)" mask="url(#leftOnly)" />
+
+      <!-- Right circle (non-overlapping part) -->
+      <circle cx="310" cy="250" r="100" fill="url(#rightImage)" mask="url(#rightOnly)" />
+
+      <!-- Intersection area -->
+      <!-- Left image clipped to right circle -->
+      <circle cx="190" cy="250" r="100" fill="url(#leftImage)" clip-path="url(#rightCircle)" />
+
+      <!-- Right image clipped to left circle with blend -->
+      <circle cx="310" cy="250" r="100" fill="url(#rightImage)" clip-path="url(#leftCircle)"
+        style="mix-blend-mode: multiply" />
+
+      <!-- Clean circle outlines -->
+      <circle cx="190" cy="250" r="100" fill="none" stroke="#333" stroke-width="2" />
+      <circle cx="310" cy="250" r="100" fill="none" stroke="#333" stroke-width="2" />
+    </svg>
+  </div>
+</body>
+
+</html>
