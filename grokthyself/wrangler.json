@@ -1,0 +1,17 @@
+{
+  "$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+  "name": "grokthyself",
+  "compatibility_date": "2025-07-01",
+  "main": "worker.js",
+  "routes": [
+    {
+      "custom_domain": true,
+      "pattern": "grokthyself.com"
+    },
+    {
+      "custom_domain": true,
+      "pattern": "www.grokthyself.com"
+    }
+  ],
+  "assets": { "directory": "./" }
+}

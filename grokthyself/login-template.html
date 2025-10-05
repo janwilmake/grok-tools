@@ -1,0 +1,133 @@
+`
+<!DOCTYPE html>
+<html lang="en" class="bg-amber-50">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Grok Thyself</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Trajan+Pro:wght@400;700&display=swap");
+
+        body {
+            font-family: "Crimson Text", serif;
+            background-color: #f5e6d3;
+            background-image:
+                radial-gradient(circle at 25% 25%, rgba(139, 69, 19, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(160, 82, 45, 0.1) 0%, transparent 50%),
+                linear-gradient(90deg, rgba(210, 180, 140, 0.1) 1px, transparent 1px),
+                linear-gradient(rgba(210, 180, 140, 0.1) 1px, transparent 1px);
+            background-size:
+                200px 200px,
+                200px 200px,
+                20px 20px,
+                20px 20px;
+        }
+
+        .latin-title {
+            font-family: "Trajan Pro", "Crimson Text", serif;
+            font-size: clamp(3rem, 8vw, 5rem);
+            line-height: 1;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-shadow: 2px 2px 4px rgba(139, 69, 19, 0.3);
+            color: #8b4513;
+        }
+
+        .papyrus-button {
+            background: linear-gradient(145deg, #deb887, #d2b48c);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+                0 6px 20px rgba(139, 69, 19, 0.3);
+            border: 2px solid #8b4513;
+            color: #654321;
+            font-weight: 700;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            letter-spacing: 0.05em;
+        }
+
+        .papyrus-button:hover:not(:disabled) {
+            background: linear-gradient(145deg, #d2b48c, #deb887);
+            transform: translateY(-2px);
+        }
+
+        .papyrus-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .checkbox-container {
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid #8b4513;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+
+<body class="text-amber-900">
+    <main class="min-h-screen flex flex-col items-center justify-center px-4 py-16">
+        <div class="text-center max-w-2xl mx-auto">
+            <h1 class="latin-title mb-8">GROK THYSELF</h1>
+
+            <div class="checkbox-container text-left">
+                <div class="space-y-4">
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" id="terms-check"
+                            class="mt-1 w-5 h-5 text-amber-700 rounded focus:ring-amber-500">
+                        <span class="text-amber-800">
+                            I accept the <a href="/terms.html" target="_blank"
+                                class="text-amber-600 underline hover:text-amber-500">Terms of Service</a>
+                            and <a href="/privacy.html" target="_blank"
+                                class="text-amber-600 underline hover:text-amber-500">Privacy Policy</a>.
+                        </span>
+                    </label>
+
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" id="consent-check"
+                            class="mt-1 w-5 h-5 text-amber-700 rounded focus:ring-amber-500">
+                        <span class="text-amber-800">
+                            I approve Grok Thyself to get all my personal X content from the X platform to allow me to
+                            use it outside of X.
+                        </span>
+                    </label>
+                </div>
+            </div>
+
+            <button id="login-btn" disabled class="papyrus-button inline-flex items-center gap-4">
+                Login with
+                <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor" aria-label="X">
+                    <path
+                        d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+            </button>
+        </div>
+    </main>
+
+    <script>
+        const termsCheck = document.getElementById('terms-check');
+        const consentCheck = document.getElementById('consent-check');
+        const loginBtn = document.getElementById('login-btn');
+
+        function updateLoginButton() {
+            const bothChecked = termsCheck.checked && consentCheck.checked;
+            loginBtn.disabled = !bothChecked;
+        }
+
+        termsCheck.addEventListener('change', updateLoginButton);
+        consentCheck.addEventListener('change', updateLoginButton);
+
+        loginBtn.addEventListener('click', () => {
+            if (!loginBtn.disabled) {
+                window.location.href = '/authorize?redirect_to=/dashboard';
+            }
+        });
+    </script>
+</body>
+
+</html>

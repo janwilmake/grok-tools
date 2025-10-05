@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "simplerauth-client": "0.0.20"
+  }
+}
