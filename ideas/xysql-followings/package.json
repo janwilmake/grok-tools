@@ -1,0 +1,9 @@
+{
+  "name": "xysql-followings",
+  "dependencies": {
+    "stripeflare": "^0.0.25"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250606.0"
+  }
+}

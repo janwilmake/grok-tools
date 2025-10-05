@@ -1,0 +1,20 @@
+{
+  "name": "following-sync",
+  "version": "1.0.0",
+  "description": "LLM-friendly X/Twitter followings sync with Stripeflare",
+  "main": "index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging"
+  },
+  "dependencies": {
+    "stripeflare": "latest",
+    "dormroom": "latest"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240129.0",
+    "typescript": "^5.0.0",
+    "wrangler": "^3.0.0"
+  }
+}

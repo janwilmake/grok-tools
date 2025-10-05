@@ -1,0 +1,37 @@
+name = "xysql"
+main = "index.ts"
+compatibility_date = "2024-01-01"
+
+dev.port = 3000
+routes = [
+  { pattern = "xysql.com", custom_domain = true },
+  { pattern = "www.xysql.com", custom_domain = true }
+]
+
+[env.production]
+vars = { ENVIRONMENT = "production" }
+
+[[durable_objects.bindings]]
+name = "DORM_NAMESPACE"
+class_name = "DORM"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["DORM"]
+
+[triggers]
+crons = [
+  "* * * * *",    # Every minute - active users
+  "0 * * * *",    # Every hour - recent users
+  "0 0 * * *"     # Every day - all users
+]
+
+[vars]
+SOCIALDATA_BASE_URL = "https://api.socialdata.tools"
+
+# Set these as secrets using wrangler secret put
+# STRIPE_SECRET_KEY
+# STRIPE_WEBHOOK_SECRET  
+# STRIPE_PAYMENT_LINK
+# SOCIALDATA_API_KEY
+# DB_SECRET

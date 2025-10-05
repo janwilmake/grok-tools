@@ -1,0 +1,9 @@
+# Create a Stripe account, navigate to https://dashboard.stripe.com/apikeys and collect `STRIPE_SECRET` and `STRIPE_PUBLISHABLE_KEY`
+STRIPE_SECRET=
+STRIPE_PUBLISHABLE_KEY=
+# Create a webhook at https://dashboard.stripe.com/webhooks/create. Endpoint URL: https://yourdomain.com/stripe-webhook and sollect `STRIPE_WEBHOOK_SIGNING_SECRET`
+STRIPE_WEBHOOK_SIGNING_SECRET=
+# Create a payment link at https://dashboard.stripe.com/payment-links and set this as `STRIPE_PAYMENT_LINK`
+STRIPE_PAYMENT_LINK=
+# Put a 32 character+ secret here to sign your secrets
+DB_SECRET=

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XYSame</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        .letter-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .letter {
+            font-size: 15vw;
+            margin: 0 2vw;
+            transition: transform 0.3s ease, color 0.3s ease;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .letter:hover {
+            transform: scale(1.1);
+        }
+
+        #x-letter:hover {
+            color: #2196F3;
+        }
+
+        #y-letter:hover {
+            color: #4CAF50;
+        }
+
+        #z-letter:hover {
+            color: #FF5252;
+        }
+
+        .title {
+            font-size: 2vw;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        .coming-soon {
+            font-size: 1.5vw;
+            color: #888;
+        }
+
+        @media (max-width: 768px) {
+            .letter {
+                font-size: 20vw;
+                margin: 0 1vw;
+            }
+
+            .title {
+                font-size: 4vw;
+            }
+
+            .coming-soon {
+                font-size: 3vw;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="title">Welcome to XYSame</h1>
+        <div class="letter-container">
+            <div id="x-letter" class="letter">𝕏</div>
+            <div id="y-letter" class="letter">𝕐</div>
+            <div id="z-letter" class="letter">ℤ</div>
+        </div>
+        <p class="coming-soon">Coming Soon</p>
+    </div>
+
+    <script>
+        document.querySelectorAll('.letter').forEach(letter => {
+            letter.addEventListener('click', function () {
+                this.style.transform = 'scale(1.2) rotate(5deg)';
+                setTimeout(() => {
+                    this.style.transform = 'scale(1.1) rotate(0deg)';
+                }, 300);
+            });
+        });
+    </script>
+</body>
+
+</html>

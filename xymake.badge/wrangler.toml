@@ -1,0 +1,6 @@
+#:schema node_modules/wrangler/config-schema.json
+name = "xymake_badge"
+main = "main.ts"
+dev.port=3000
+compatibility_date = "2025-04-19"
+routes = [{ pattern = "badge.xymake.com", custom_domain = true }]

@@ -1,0 +1,17 @@
+{
+  "name": "xysql",
+  "version": "1.0.0",
+  "description": "A Twitter archival service using Stripeflare and SocialData API",
+  "main": "index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "dependencies": {
+    "stripeflare": "^0.0.22"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240129.0"
+  }
+}

@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X Y SQL _ Twitter Archive Service</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1da1f2;
+            --primary-dark: #1991da;
+            --bg-light: #f8f9fc;
+            --text-dark: #2a2a2a;
+            --text-light: #6b7280;
+            --border-color: #e5e7eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            line-height: 1.6;
+            padding: 0;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 30px;
+            margin-bottom: 25px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 28px;
+            margin-right: 12px;
+            color: var(--primary);
+        }
+
+        h1 {
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 24px;
+            margin: 0;
+        }
+
+        .info-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+            padding: 15px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        .info-value {
+            font-weight: 500;
+            font-size: 15px;
+        }
+
+        .highlighted {
+            background-color: rgba(29, 161, 242, 0.08);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .payment-button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s ease;
+            width: 100%;
+            text-align: center;
+            margin: 20px 0 15px;
+        }
+
+        .payment-button:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .form-container {
+            margin-top: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 600;
+            color: var(--text-dark);
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .form-button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .form-button:hover {
+            background: var(--primary-dark);
+        }
+
+        .form-button:disabled {
+            background: var(--text-light);
+            cursor: not-allowed;
+        }
+
+        .form-button.secondary {
+            background: #f3f4f6;
+            color: var(--text-dark);
+            border: 1px solid var(--border-color);
+        }
+
+        .form-button.secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .badge-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .badge-primary {
+            background-color: rgba(29, 161, 242, 0.1);
+            color: var(--primary);
+        }
+
+        .badge-warning {
+            background-color: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
+        }
+
+        .badge-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+        }
+
+        .badge i {
+            margin-right: 4px;
+            font-size: 11px;
+        }
+
+        .message {
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .message-success {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .message-error {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--error);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .no-data-message {
+            text-align: center;
+            color: var(--text-light);
+            font-style: italic;
+            margin: 20px 0;
+        }
+
+        .twitter-setup {
+            background: rgba(29, 161, 242, 0.05);
+            border: 1px solid rgba(29, 161, 242, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .twitter-setup h3 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .twitter-setup p {
+            color: var(--text-light);
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .twitter-profile {
+            background: rgba(16, 185, 129, 0.05);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .twitter-profile h4 {
+            color: var(--success);
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .twitter-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 5px 0;
+            font-size: 13px;
+        }
+
+        .twitter-stat .label {
+            color: var(--text-light);
+        }
+
+        .twitter-stat .value {
+            font-weight: 600;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .input-group .form-input {
+            flex: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="header">
+                <div class="logo"><i class="fab fa-twitter"></i></div>
+                <h1>Twitter Archive Service</h1>
+            </div>
+
+            <div id="user-info" style="display: none;">
+                <div class="info-container">
+                    <div class="info-row">
+                        <span class="info-label">Email</span>
+                        <span id="email-value" class="info-value"></span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Balance</span>
+                        <span id="balance" class="info-value badge badge-primary">
+                            <i class="fas fa-wallet"></i>
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Archived Posts</span>
+                        <span id="archived-count" class="info-value badge badge-success">
+                            <i class="fas fa-archive"></i>
+                        </span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Max Historic Tweets</span>
+                        <span id="max-tweets" class="info-value badge badge-success">
+                            <i class="fas fa-list"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Twitter Setup Section -->
+                <div id="twitter-setup" class="twitter-setup" style="display: none;">
+                    <h3><i class="fab fa-twitter"></i> Setup Twitter Archive</h3>
+                    <p>Enter your Twitter username (without @) to start archiving your tweets:</p>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <input type="text" id="username-input" class="form-input"
+                                placeholder="Enter Twitter username..." maxlength="15">
+                            <button id="set-username-btn" class="form-button">
+                                <i class="fas fa-link"></i> Connect
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Twitter Profile Section -->
+                <div id="twitter-profile" class="twitter-profile" style="display: none;">
+                    <h4><i class="fas fa-check-circle"></i> Connected Twitter Account</h4>
+                    <div class="twitter-stat">
+                        <span class="label">Username:</span>
+                        <span class="value" id="twitter-username">@username</span>
+                    </div>
+                    <div class="twitter-stat">
+                        <span class="label">Name:</span>
+                        <span class="value" id="twitter-name">Display Name</span>
+                    </div>
+                    <div class="twitter-stat">
+                        <span class="label">Followers:</span>
+                        <span class="value" id="twitter-followers">0</span>
+                    </div>
+                    <div class="twitter-stat">
+                        <span class="label">Verified:</span>
+                        <span class="value" id="twitter-verified">No</span>
+                    </div>
+                </div>
+
+                <!-- Config Update Section -->
+                <div class="form-container">
+                    <div class="form-group">
+                        <label class="form-label" for="max-tweets-input">
+                            Update Max Historic Tweets (0-10,000)
+                        </label>
+                        <div class="input-group">
+                            <input type="number" id="max-tweets-input" class="form-input" min="0" max="10000">
+                            <button id="update-config-btn" class="form-button">
+                                Update
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="message-container"></div>
+            </div>
+
+            <div id="no-data" class="no-data-message" style="display: none;">
+                <p>Start your Twitter archival service by making a payment to activate your account.</p>
+            </div>
+
+            <a id="paymentLink" target="_blank" href="#" class="payment-button">
+                <i class="fab fa-stripe" style="margin-right: 10px;"></i>
+                Activate Twitter Archive Service
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function showMessage(text, type = 'success') {
+            const container = document.getElementById('message-container');
+            container.innerHTML = `<div class="message message-${type}">${text}</div>`;
+
+            setTimeout(() => {
+                container.innerHTML = '';
+            }, 5000);
+        }
+
+        function setUsernameHandler() {
+            const input = document.getElementById('username-input');
+            const button = document.getElementById('set-username-btn');
+            const username = input.value.trim();
+
+            if (!username) {
+                showMessage('Please enter a Twitter username', 'error');
+                return;
+            }
+
+            if (username.length > 15 || !/^[a-zA-Z0-9_]+$/.test(username)) {
+                showMessage('Invalid username format. Must be 1-15 characters, alphanumeric and underscore only', 'error');
+                return;
+            }
+
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Connecting...';
+
+            fetch('/set-username', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    username: username
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage('Twitter account connected successfully!', 'success');
+
+                        // Update UI with Twitter profile info
+                        document.getElementById('twitter-setup').style.display = 'none';
+                        document.getElementById('twitter-profile').style.display = 'block';
+
+                        document.getElementById('twitter-username').textContent = `@${data.twitter_user.username}`;
+                        document.getElementById('twitter-name').textContent = data.twitter_user.name;
+                        document.getElementById('twitter-followers').textContent = data.twitter_user.followers_count.toLocaleString();
+                        document.getElementById('twitter-verified').textContent = data.twitter_user.verified ? 'Yes' : 'No';
+
+                        // Refresh page after a short delay to get updated data
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else {
+                        showMessage(data.error || 'Failed to connect Twitter account', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('Failed to connect Twitter account', 'error');
+                })
+                .finally(() => {
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-link"></i> Connect';
+                });
+        }
+
+        function updateConfigHandler() {
+            const input = document.getElementById('max-tweets-input');
+            const button = document.getElementById('update-config-btn');
+            const value = parseInt(input.value);
+
+            if (isNaN(value) || value < 0 || value > 10000) {
+                showMessage('Please enter a valid number between 0 and 10,000', 'error');
+                return;
+            }
+
+            button.disabled = true;
+            button.textContent = 'Updating...';
+
+            fetch('/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    max_historic_tweets: value
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage('Configuration updated successfully!', 'success');
+                        document.getElementById('max-tweets').innerHTML =
+                            `<i class="fas fa-list"></i> ${value.toLocaleString()}`;
+                    } else {
+                        showMessage(data.error || 'Failed to update configuration', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('Failed to update configuration', 'error');
+                })
+                .finally(() => {
+                    button.disabled = false;
+                    button.textContent = 'Update';
+                });
+        }
+
+        // Initialize page
+        if (window.data) {
+            const data = window.data;
+
+            if (data.email || data.balance !== undefined) {
+                document.getElementById('user-info').style.display = 'block';
+                document.getElementById('no-data').style.display = 'none';
+
+                document.getElementById('email-value').textContent = data.email || 'Not provided';
+                document.getElementById('balance').innerHTML =
+                    `<i class="fas fa-wallet"></i> $${(data.balance / 100).toFixed(2)}`;
+                document.getElementById('max-tweets').innerHTML =
+                    `<i class="fas fa-list"></i> ${(data.max_historic_tweets || 1000).toLocaleString()}`;
+                document.getElementById('archived-count').innerHTML =
+                    `<i class="fas fa-archive"></i> ${(data.archived_posts_count || 0).toLocaleString()}`;
+
+                const maxTweetsInput = document.getElementById('max-tweets-input');
+                maxTweetsInput.value = data.max_historic_tweets || 1000;
+
+                // Show Twitter setup or profile based on connection status
+                if (data.has_twitter_data && data.twitter_username) {
+                    document.getElementById('twitter-setup').style.display = 'none';
+                    document.getElementById('twitter-profile').style.display = 'block';
+
+                    document.getElementById('twitter-username').textContent = `@${data.twitter_username}`;
+                    document.getElementById('twitter-name').textContent = data.twitter_name || 'Unknown';
+                    document.getElementById('twitter-followers').textContent = (data.twitter_followers_count || 0).toLocaleString();
+                    document.getElementById('twitter-verified').textContent = data.twitter_verified ? 'Yes' : 'No';
+                } else {
+                    document.getElementById('twitter-setup').style.display = 'block';
+                    document.getElementById('twitter-profile').style.display = 'none';
+
+                    // Add event listeners for Twitter setup
+                    document.getElementById('set-username-btn').addEventListener('click', setUsernameHandler);
+                    document.getElementById('username-input').addEventListener('keypress', function (e) {
+                        if (e.key === 'Enter') {
+                            setUsernameHandler();
+                        }
+                    });
+                }
+
+                // Add event listeners for config update
+                document.getElementById('update-config-btn').addEventListener('click', updateConfigHandler);
+                document.getElementById('max-tweets-input').addEventListener('keypress', function (e) {
+                    if (e.key === 'Enter') {
+                        updateConfigHandler();
+                    }
+                });
+            } else {
+                document.getElementById('user-info').style.display = 'none';
+                document.getElementById('no-data').style.display = 'block';
+            }
+
+            if (data.payment_link) {
+                document.getElementById('paymentLink').href =
+                    `${data.payment_link}?client_reference_id=${data.client_reference_id}`;
+            }
+        } else {
+            document.getElementById('user-info').style.display = 'none';
+            document.getElementById('no-data').style.display = 'block';
+        }
+    </script>
+</body>
+
+</html>

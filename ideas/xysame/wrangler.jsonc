@@ -1,0 +1,10 @@
+{
+  "name": "xysame",
+  "dev": { "port": 3000 },
+  "compatibility_date": "2025-01-30",
+  "assets": { "directory": "./" },
+  "routes": [
+    { "pattern": "xysame.com", "custom_domain": true },
+    { "pattern": "www.xysame.com", "custom_domain": true }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Double-Struck Text Converter API",
+    "description": "An API for converting regular text to double-struck mathematical characters.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "XYMake",
+      "url": "https://abc.xymake.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://abc.xymake.com",
+      "description": "Production server"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Get the web interface or an empty response",
+        "description": "Returns the web interface for browser requests or an empty conversion for API requests.",
+        "operationId": "getRoot",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string",
+                  "description": "HTML web interface for the Double-Struck Text Converter"
+                }
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string",
+                  "description": "Markdown response with empty conversion"
+                },
+                "example": "# Double-Struck Conversion\n\n**Original**: \n\n**Converted**: "
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{text}": {
+      "get": {
+        "summary": "Convert text to double-struck format",
+        "description": "Converts the provided text to double-struck mathematical characters. Returns either HTML or Markdown based on the client type.",
+        "operationId": "convertText",
+        "parameters": [
+          {
+            "name": "text",
+            "in": "path",
+            "required": true,
+            "description": "The text to convert to double-struck format",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Hello123"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful conversion",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string",
+                  "description": "HTML web interface pre-populated with the converted text"
+                }
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string",
+                  "description": "Markdown response with the original and converted text"
+                },
+                "example": "# Double-Struck Conversion\n\n**Original**: Hello123\n\n**Converted**: ℍ𝕖𝕝𝕝𝕠𝟙𝟚𝟛"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConversionResponse": {
+        "type": "object",
+        "properties": {
+          "original": {
+            "type": "string",
+            "description": "The original text input"
+          },
+          "converted": {
+            "type": "string",
+            "description": "The text converted to double-struck format"
+          }
+        }
+      },
+      "SupportedCharacters": {
+        "type": "object",
+        "properties": {
+          "uppercase": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Mapping of uppercase letters to their double-struck equivalents",
+            "example": {
+              "A": "𝔸",
+              "B": "𝔹"
+            }
+          },
+          "lowercase": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Mapping of lowercase letters to their double-struck equivalents",
+            "example": {
+              "a": "𝕒",
+              "b": "𝕓"
+            }
+          },
+          "numbers": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Mapping of numbers to their double-struck equivalents",
+            "example": {
+              "0": "𝟘",
+              "1": "𝟙"
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "conversion",
+      "description": "Text conversion operations"
+    }
+  ]
+}

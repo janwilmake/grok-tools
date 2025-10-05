@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "@cloudflare/workers-types": "^4.20250404.0"
+  }
+}

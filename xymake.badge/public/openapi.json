@@ -1,0 +1,107 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Token Count Badge API",
+    "description": "API that returns a badge image showing the LLM context token count for a given xymake profile. Features real-time token counting via streaming in Cloudflare with 1-week caching.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://badge.xymake.com",
+      "description": "Production server"
+    }
+  ],
+  "paths": {
+    "/{login}/status/{threadId}": {
+      "get": {
+        "summary": "Get repository token count badge",
+        "description": "Returns a badge image showing the token count for the specified repository",
+        "operationId": "getTokenCountBadge",
+        "parameters": [
+          {
+            "name": "login",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+
+          {
+            "name": "threadId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "label",
+            "in": "query",
+            "description": "Custom label",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "image/svg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "description": "Badge image showing token count"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request parameters",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "description": "Badge showing 'invalid'"
+              }
+            }
+          },
+          "404": {
+            "description": "Repository not found",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "description": "Badge showing 'repo_not_found'"
+              }
+            }
+          },
+          "500": {
+            "description": "API error",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                },
+                "description": "Badge showing 'api_error'"
+              }
+            }
+          }
+        },
+        "x-response-caching": {
+          "cacheDuration": "1w"
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {}
+  }
+}
