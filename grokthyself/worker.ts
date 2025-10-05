@@ -122,6 +122,7 @@ interface User extends Record<string, any> {
   id: string;
   username: string;
   is_premium: number;
+  is_public: number;
   balance: number;
   initialized: number;
   scrape_status: "pending" | "in_progress" | "completed" | "failed";
@@ -149,12 +150,16 @@ interface UserStats {
   postCount: number;
   balance: number;
   isPremium: boolean;
+  isPublic: boolean;
   initialized: boolean;
   scrapeStatus: "pending" | "in_progress" | "completed" | "failed";
   posts?: Post[];
 }
 
-const dashboardPage = (user: any, stats: UserStats) => `<!DOCTYPE html>
+const dashboardPage = (
+  user: UserContext["user"],
+  stats: UserStats
+) => `<!DOCTYPE html>
 <html lang="en" class="bg-amber-50">
 <head>
     <meta charset="UTF-8">
@@ -283,12 +288,12 @@ const dashboardPage = (user: any, stats: UserStats) => `<!DOCTYPE html>
                               stats.scrapeStatus !== "completed"
                                 ? "opacity-50 pointer-events-none"
                                 : ""
-                            }">
-                                Admin Panel
-                            </a>
-                            <a href="/logout" class="papyrus-button block text-center bg-red-200 hover:bg-red-300">
-                                Logout
-                            </a>
+                            }">Admin Panel</a>
+                            <a href="/pricing" class="papyrus-button block text-center">Pricing</a>
+                            <a href="/${
+                              user.username
+                            }?q=" class="papyrus-button block text-center">Posts</a>
+                            <a href="/logout" class="papyrus-button block text-center bg-red-200 hover:bg-red-300">Logout</a>
                         </div>
                     </div>
                 </div>
@@ -323,7 +328,9 @@ const dashboardPage = (user: any, stats: UserStats) => `<!DOCTYPE html>
                         <div class="text-sm text-amber-600">Status</div>
                     </div>
                     <div>
-                        <div class="text-2xl font-bold text-amber-700">Public</div>
+                        <div class="text-2xl font-bold text-amber-700">${
+                          stats.isPublic ? "Public" : "Private"
+                        }</div>
                         <div class="text-sm text-amber-600">Visibility</div>
                     </div>
                 </div>
@@ -379,10 +386,17 @@ const dashboardPage = (user: any, stats: UserStats) => `<!DOCTYPE html>
 @Queryable()
 export class UserDO extends DurableObject<Env> {
   private sql: SqlStorage;
+  private try: SqlStorage["exec"];
 
   constructor(state: DurableObjectState, env: Env) {
     super(state, env);
     this.sql = state.storage.sql;
+    this.try = (query: string, ...params) => {
+      try {
+        return this.sql.exec(query, ...params);
+      } catch {}
+    };
+
     this.env = env;
     this.initializeTables();
   }
@@ -393,6 +407,7 @@ export class UserDO extends DurableObject<Env> {
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
+        is_public INTEGER DEFAULT 0,
         is_premium INTEGER DEFAULT 0,
         balance INTEGER DEFAULT 0,
         initialized INTEGER DEFAULT 0,
@@ -421,6 +436,8 @@ export class UserDO extends DurableObject<Env> {
         FOREIGN KEY (user_id) REFERENCES users (id)
       )
     `);
+
+    this.try(`ALTER TABLE users ADD COLUMN is_public INTEGER DEFAULT 0`);
 
     // Create indexes
     this.sql.exec(
@@ -476,12 +493,12 @@ export class UserDO extends DurableObject<Env> {
     return parsed;
   }
 
-  private buildSearchSql(
-    userId: string,
-    parsedQuery: ParsedQuery
-  ): { sql: string; params: any[] } {
-    let sql = `SELECT DISTINCT conversation_id FROM posts WHERE user_id = ?`;
-    const params: any[] = [userId];
+  private buildSearchSql(parsedQuery: ParsedQuery): {
+    sql: string;
+    params: any[];
+  } {
+    let sql = `SELECT DISTINCT conversation_id FROM posts`;
+    const params: any[] = [];
 
     // Add from filter
     if (parsedQuery.from) {
@@ -541,9 +558,9 @@ export class UserDO extends DurableObject<Env> {
       const date = new Date(post.created_at).toISOString().slice(0, 10);
       const isReply = post.is_reply ? "\t↳" : "";
 
-      markdown += `${isReply}@${post.author_username} (${date} ${
-        post.like_count > 0 ? `❤️ ${post.like_count}` : ""
-      }${
+      markdown += `${isReply}@${post.author_username} [${
+        post.tweet_id
+      }] (${date} ${post.like_count > 0 ? `❤️ ${post.like_count}` : ""}${
         post.retweet_count > 0 ? ` 🔄 ${post.retweet_count}` : ""
       }) - ${post.text.replaceAll("\n", "\t")}\n`;
     }
@@ -552,19 +569,27 @@ export class UserDO extends DurableObject<Env> {
   }
 
   async searchPosts(
-    userId: string,
+    userId: string | undefined,
     searchQuery: PostSearchQuery
   ): Promise<string> {
+    const user = this.sql.exec<User>(`SELECT * FROM users`).toArray()[0];
+
+    if (!user) {
+      return `User not found`;
+    }
+
+    if (!user.is_public && userId !== user.id) {
+      return `User did not make posts public`;
+    }
+
     const maxTokens = searchQuery.maxTokens || 50000;
     const parsedQuery = this.parseSearchQuery(searchQuery.q || "");
 
     console.log("Parsed query:", parsedQuery);
 
     // First, find matching conversation IDs
-    const { sql: searchSql, params: searchParams } = this.buildSearchSql(
-      userId,
-      parsedQuery
-    );
+    const { sql: searchSql, params: searchParams } =
+      this.buildSearchSql(parsedQuery);
 
     console.log("Search SQL:", searchSql, "Params:", searchParams);
 
@@ -593,8 +618,7 @@ export class UserDO extends DurableObject<Env> {
     const placeholders = conversationIds.map(() => "?").join(",");
     const allPostsResult = this.sql
       .exec<Post>(
-        `SELECT * FROM posts WHERE user_id = ? AND conversation_id IN (${placeholders})`,
-        userId,
+        `SELECT * FROM posts WHERE conversation_id IN (${placeholders})`,
         ...conversationIds
       )
       .toArray();
@@ -930,6 +954,7 @@ export class UserDO extends DurableObject<Env> {
       postCount: postCountResult.count,
       balance: user.balance,
       isPremium: Boolean(user.is_premium),
+      isPublic: Boolean(user.is_public),
       initialized: Boolean(user.initialized),
       scrapeStatus: user.scrape_status as
         | "pending"
@@ -971,7 +996,7 @@ export default {
         try {
           // Get user's Durable Object
           const userDO = env.USER_DO.get(
-            env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.id)
+            env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.username)
           );
 
           return studioMiddleware(request, userDO.raw, {
@@ -992,13 +1017,14 @@ export default {
         try {
           // Get user's Durable Object
           const userDO = env.USER_DO.get(
-            env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.id)
+            env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.username)
           );
 
           // Get user stats
-          const stats = await userDO.getUserStats(ctx.user);
+          const stats: any = await userDO.getUserStats(ctx.user);
+          const dashboardHtml = dashboardPage(ctx.user, stats);
 
-          return new Response(dashboardPage(ctx.user, stats), {
+          return new Response(dashboardHtml, {
             headers: { "Content-Type": "text/html" },
           });
         } catch (error) {
@@ -1016,7 +1042,7 @@ export default {
         try {
           // Get user's Durable Object
           const userDO = env.USER_DO.get(
-            env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.id)
+            env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.username)
           );
 
           // Get user stats to check premium status
@@ -1047,76 +1073,63 @@ export default {
         }
       }
 
-      if (url.pathname === "/posts") {
-        if (!ctx.authenticated) {
-          return new Response(
-            JSON.stringify({ error: "Authentication required" }),
-            {
-              status: 401,
-              headers: { "Content-Type": "application/json" },
-            }
-          );
-        }
+      // assume its a username
 
-        try {
-          // Get query parameters
-          const query = url.searchParams.get("q") || "";
-          const maxTokensParam = url.searchParams.get("maxTokens");
-          const maxTokens = maxTokensParam
-            ? parseInt(maxTokensParam, 10)
-            : 50000;
+      try {
+        // Get query parameters
+        const query = url.searchParams.get("q") || "";
+        const maxTokensParam = url.searchParams.get("maxTokens");
+        const maxTokens = maxTokensParam ? parseInt(maxTokensParam, 10) : 50000;
 
-          if (maxTokens < 1 || maxTokens > 5000000) {
-            return new Response(
-              JSON.stringify({
-                error: "maxTokens must be between 1 and 5000000",
-              }),
-              {
-                status: 400,
-                headers: { "Content-Type": "application/json" },
-              }
-            );
-          }
-
-          console.log(
-            `Posts search request: q="${query}", maxTokens=${maxTokens}`
-          );
-
-          // Get user's Durable Object
-          const userDO = env.USER_DO.get(
-            env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.id)
-          );
-
-          // Perform search
-          const markdown = await userDO.searchPosts(ctx.user.id, {
-            q: query,
-            maxTokens,
-          });
-
-          // Return as markdown
-          return new Response(markdown, {
-            headers: {
-              "Content-Type": "text/markdown; charset=utf-8",
-              "Content-Disposition": `inline; filename="posts-${Date.now()}.md"`,
-            },
-          });
-        } catch (error) {
-          console.error("Posts search error:", error);
+        if (maxTokens < 1 || maxTokens > 5000000) {
           return new Response(
             JSON.stringify({
-              error: "Error searching posts",
-              details: error instanceof Error ? error.message : String(error),
+              error: "maxTokens must be between 1 and 5000000",
             }),
             {
-              status: 500,
+              status: 400,
               headers: { "Content-Type": "application/json" },
             }
           );
         }
-      }
 
-      // Default redirect to login
-      return Response.redirect(url.origin + "/login", 302);
+        console.log(
+          `Posts search request: q="${query}", maxTokens=${maxTokens}`
+        );
+
+        const username = url.pathname.slice(1);
+
+        // Get user's Durable Object
+        const userDO = env.USER_DO.get(
+          env.USER_DO.idFromName(DO_NAME_PREFIX + username)
+        );
+
+        // Perform search
+        const markdown = await userDO.searchPosts(ctx.user.id, {
+          q: query,
+          maxTokens,
+        });
+
+        // Return as markdown
+        return new Response(markdown, {
+          headers: {
+            "Content-Type": "text/markdown; charset=utf-8",
+            "Content-Disposition": `inline; filename="${username}.md"`,
+          },
+        });
+      } catch (error) {
+        console.error("Posts search error:", error);
+        return new Response(
+          JSON.stringify({
+            error: "Error searching posts",
+            details: error instanceof Error ? error.message : String(error),
+          }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
+      }
     },
     {
       isLoginRequired: false,

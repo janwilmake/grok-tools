@@ -51,6 +51,10 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Twitter Widgets JavaScript -->
+    <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
     <style>
         @import url("https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Trajan+Pro:wght@400;700&display=swap");
 
@@ -71,7 +75,7 @@
 
         .latin-title {
             font-family: "Trajan Pro", "Crimson Text", serif;
-            font-size: clamp(4rem, 12vw, 8rem);
+            font-size: clamp(4rem, 8vw, 6rem);
             line-height: 1;
             font-weight: 700;
             letter-spacing: 0.1em;
@@ -132,6 +136,11 @@
             animation: fadeIn 1s ease-in-out;
         }
 
+        .fade-in-no-delay {
+            animation: fadeIn 1s ease-in-out;
+            animation-delay: 0s !important;
+        }
+
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -177,6 +186,73 @@
             letter-spacing: 0.02em;
             line-height: 1.6;
         }
+
+        .posts-section {
+            margin-top: 4rem;
+            margin-bottom: 4rem;
+        }
+
+        .posts-title {
+            font-family: "Trajan Pro", "Crimson Text", serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            color: #8b4513;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            margin-bottom: 3rem;
+        }
+
+        .tweets-container {
+            max-width: 60%;
+            margin: 0 auto;
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: 1fr;
+        }
+
+        /* Mobile: single column */
+        @media (max-width: 640px) {
+            .tweets-container {
+                max-width: 95%;
+                gap: 0.5rem;
+            }
+        }
+
+        /* Tablet: two columns */
+        @media (min-width: 641px) and (max-width: 1024px) {
+            .tweets-container {
+                max-width: 80%;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1rem;
+            }
+        }
+
+        /* Desktop: three columns */
+        @media (min-width: 1025px) {
+            .tweets-container {
+                max-width: 60%;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 1.5rem;
+            }
+        }
+
+        .twitter-tweet {
+            margin: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        /* Preload tweets out of view */
+        .tweet-preload {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            visibility: hidden;
+        }
+
+        .tweet-visible {
+            position: static;
+            visibility: visible;
+        }
     </style>
 </head>
 
@@ -208,8 +284,9 @@
             </a>
         </div>
 
+
         <!-- Works With Section -->
-        <div class="text-center max-w-4xl mx-auto mb-20 fade-in">
+        <div class="text-center max-w-4xl mx-auto mb-20 fade-in-no-delay">
             <h2 class="works-with-title">Works with Your Favorite AI Tools</h2>
 
             <div class="flex flex-wrap justify-center items-center gap-8 mb-8">
@@ -230,6 +307,26 @@
             </p>
         </div>
 
+        <!-- Posts Section -->
+        <div class="posts-section w-full text-center fade-in-no-delay">
+            <h2 class="posts-title">See What People Are Saying</h2>
+
+            <div class="tweets-container">
+                <blockquote class="twitter-tweet" data-conversation="none" data-theme="light">
+                    <a href="https://twitter.com/janwilmake/status/1904080559422288062"></a>
+                </blockquote>
+
+                <blockquote class="twitter-tweet" data-conversation="none" data-theme="light">
+                    <a href="https://twitter.com/janwilmake/status/1904234442937536644"></a>
+                </blockquote>
+
+                <blockquote class="twitter-tweet" data-conversation="none" data-theme="light">
+                    <a href="https://twitter.com/janwilmake/status/1906392269579542700"></a>
+                </blockquote>
+            </div>
+        </div>
+
+
         <!-- Footer -->
         <footer class="text-center text-amber-800 opacity-60">
             <p class="text-sm">
@@ -245,6 +342,23 @@
             elements.forEach((el, index) => {
                 el.style.animationDelay = `${index * 0.4}s`;
             });
+
+            // No delay elements start immediately
+            const noDelayElements = document.querySelectorAll('.fade-in-no-delay');
+            noDelayElements.forEach((el) => {
+                el.style.animationDelay = '0s';
+            });
+        });
+
+        // Preload and smooth tweet loading
+        window.addEventListener('load', () => {
+            // Wait for Twitter widgets to load
+            if (window.twttr && window.twttr.ready) {
+                window.twttr.ready(() => {
+                    // Tweets are automatically embedded by Twitter's widget script
+                    console.log('Twitter widgets loaded');
+                });
+            }
         });
     </script>
 </body>
