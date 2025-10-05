@@ -32,4 +32,4 @@ TODO:
 - Expose the MCP (after login, only allow if username matches)
 - For free users, put payment URL in every response.
 
-I can build this and make it a real app within a week. I can give this away for free to some friends, and discount price on premium one from $129 to $49 temporarily. This
+I can build this and make it a real app within a week. I can give this away for free to some friends, and discount price on premium one from $129 to $49 temporarily.

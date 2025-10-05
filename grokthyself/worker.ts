@@ -497,7 +497,7 @@ export class UserDO extends DurableObject<Env> {
     sql: string;
     params: any[];
   } {
-    let sql = `SELECT DISTINCT conversation_id FROM posts`;
+    let sql = `SELECT DISTINCT conversation_id FROM posts WHERE 1=1`;
     const params: any[] = [];
 
     // Add from filter
