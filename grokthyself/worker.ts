@@ -87,11 +87,12 @@ interface TwitterAPIResponse {
 }
 
 interface ThreadContextResponse {
-  replies: Tweet[];
+  tweets: Tweet[];
   has_next_page: boolean;
-  next_cursor: string;
+  next_cursor?: string;
   status: "success" | "error";
-  message: string;
+  msg: "success" | "error";
+  message?: string;
 }
 
 // Database Types
@@ -538,7 +539,7 @@ export class UserDO extends DurableObject<Env> {
   }
 
   private async fetchUserPosts(username: string): Promise<TwitterAPIResponse> {
-    const url = `https://api.twitterapi.io/twitter/user/last_tweets?userName=${username}`;
+    const url = `https://api.twitterapi.io/twitter/user/last_tweets?userName=${username}&includeReplies=true`;
     console.log(`Fetching user posts from: ${url}`);
 
     const response = await fetch(url, {
