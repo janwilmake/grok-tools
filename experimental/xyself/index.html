@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-black">
+
+<head>
+    <!-- Analytics -->
+    <script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XYSelf - Turn Your X Into Your Digital Self</title>
+    <meta name="description"
+        content="Create a personal AI that knows your thoughts, ideas, and persona from your X posts. Chat with AI versions of anyone on X." />
+    <meta name="robots" content="index, follow" />
+    <meta name="keywords" content="AI clone, X posts, Twitter AI, digital self, personal AI, social media AI" />
+
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://xyself.com" />
+
+    <!-- Facebook Meta Tags -->
+    <meta property="og:url" content="https://xyself.com" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="XYSelf - Turn Your X Into Your Digital Self" />
+    <meta property="og:description"
+        content="Create a personal AI that knows your thoughts, ideas, and persona from your X posts. Chat with AI versions of anyone on X." />
+    <meta property="og:image" content="https://quickog.com/screenshot/xyself.com" />
+    <meta property="og:image:alt" content="XYSelf - Create a personal AI from your X posts" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta property="twitter:domain" content="xyself.com" />
+    <meta property="twitter:url" content="https://xyself.com" />
+    <meta name="twitter:title" content="XYSelf - Turn Your X Into Your Digital Self" />
+    <meta name="twitter:description"
+        content="Create a personal AI that knows your thoughts, ideas, and persona from your X posts. Chat with AI versions of anyone on X." />
+    <meta name="twitter:image" content="https://quickog.com/screenshot/xyself.com" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "XYSelf",
+        "description": "Create a personal AI that knows your thoughts, ideas, and persona from your X posts",
+        "url": "https://xyself.com",
+        "applicationCategory": "AI, Social Media",
+        "operatingSystem": "Web Browser"
+    }
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+        body {
+            font-family: "Inter", sans-serif;
+        }
+
+        .xy-gradient {
+            background: linear-gradient(135deg, #000000 0%, #121212 100%);
+        }
+
+        .xy-border {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .button-glow:hover {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+
+        .giant-heading {
+            font-size: clamp(3.5rem, 10vw, 7rem);
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="text-white">
+    <main class="min-h-screen xy-gradient">
+        <!-- Navigation -->
+        <nav class="w-full p-4">
+            <div class="max-w-5xl mx-auto flex justify-between items-center">
+                <h1 class="text-2xl font-bold">XYSelf</h1>
+                <div id="nav-auth" class="flex items-center gap-4">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-5xl mx-auto px-4 py-16 md:py-24">
+            <!-- Hero Section -->
+            <div class="text-center mb-20 fade-in">
+                <h1 class="giant-heading mb-10">Turn Your
+                    <svg class="inline-block w-24 h-24 md:w-28 md:h-28 -mt-4" viewBox="0 0 24 24" fill="currentColor"
+                        aria-label="X (formerly Twitter)">
+                        <path
+                            d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg> Into Your Digital Self
+                </h1>
+
+                <div class="xy-border rounded-xl p-8 bg-white/5 mb-12 mx-auto max-w-3xl">
+                    <div class="flex flex-col md:flex-row items-center justify-center gap-4 mb-6">
+                        <p class="text-gray-400 line-through font-mono text-xl">x.com/username</p>
+                        <svg class="w-8 h-8 text-blue-400 transform rotate-90 md:rotate-0" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                        <p class="text-blue-400 font-mono text-xl">xyself.com/username</p>
+                    </div>
+                    <p class="text-xl text-gray-300">
+                        Chat with an AI version of anyone on X - just swap the domain and start talking
+                    </p>
+                </div>
+
+                <div class="flex flex-wrap justify-center gap-4 mb-4">
+                    <a href="/login"
+                        class="bg-blue-600 hover:bg-blue-700 px-10 py-5 rounded-full font-bold text-xl transition-all button-glow flex items-center gap-2">
+                        Create Your Digital Self
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                    </a>
+                    <a href="https://github.com/janwilmake/xyself" target="_blank" rel="noopener noreferrer"
+                        class="bg-white/10 hover:bg-white/20 px-8 py-4 rounded-full font-medium text-lg transition-all flex items-center gap-2">
+                        View on GitHub
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill-rule="evenodd"
+                                d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </a>
+                </div>
+
+                <p class="text-sm text-gray-400">
+                    Creating your digital self will make your X content accessible to our AI model. Read our
+                    <a href="/tos.html" class="text-blue-400 underline hover:text-blue-300">Terms and Conditions</a>
+                </p>
+            </div>
+
+            <!-- Quick Try Section -->
+            <div class="xy-border rounded-xl p-8 mb-16 bg-white/5">
+                <h2 class="text-2xl font-bold mb-6 text-center">Try It Now</h2>
+                <div class="max-w-md mx-auto">
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="username-input" placeholder="Enter any X/GitHub username"
+                            class="flex-1 px-4 py-3 bg-black/50 xy-border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="try-btn"
+                            class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium transition-all">
+                            Try
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-400 text-center">
+                        Examples: janwilmake, octocat, gdb
+                    </p>
+                </div>
+            </div>
+
+            <!-- Value Props Section -->
+            <div class="grid md:grid-cols-3 gap-6 mb-20">
+                <div class="xy-border rounded-xl p-8 hover:bg-white/5 transition-colors">
+                    <div class="text-blue-400 mb-6">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Chat With Anyone</h3>
+                    <p class="text-gray-400 text-lg">
+                        Talk to any X user as if they were there, powered by their public posts and context
+                    </p>
+                </div>
+
+                <div class="xy-border rounded-xl p-8 hover:bg-white/5 transition-colors">
+                    <div class="text-blue-400 mb-6">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Personal AI Clone</h3>
+                    <p class="text-gray-400 text-lg">
+                        Create a digital version of yourself for others to interact with 24/7
+                    </p>
+                </div>
+
+                <div class="xy-border rounded-xl p-8 hover:bg-white/5 transition-colors">
+                    <div class="text-blue-400 mb-6">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-3">Private & Secure</h3>
+                    <p class="text-gray-400 text-lg">
+                        Control what content gets used and who can access your digital self
+                    </p>
+                </div>
+            </div>
+
+            <!-- Example Section -->
+            <div class="xy-border rounded-xl p-10 mb-20 bg-white/5">
+                <h2 class="text-3xl font-bold mb-8 text-center">See It In Action</h2>
+                <div class="flex flex-col items-center gap-4 justify-center mb-6">
+                    <p class="text-gray-400 line-through font-mono">
+                        https://x.com/janwilmake</p>
+                    <svg class="w-8 h-8 text-blue-400 transform rotate-90 md:rotate-0" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                    </svg>
+                    <p class="text-blue-400 font-mono">
+                        https://xyself.com/janwilmake</p>
+                </div>
+                <div class="text-center">
+                    <a href="/janwilmake" target="_blank"
+                        class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium text-lg inline-block transition-all">
+                        Chat With Sample
+                    </a>
+                </div>
+            </div>
+
+            <!-- CTA Section -->
+            <div class="xy-border rounded-xl p-10 bg-gradient-to-r from-blue-900/30 to-cyan-900/30 mb-16">
+                <div class="text-center">
+                    <h2 class="text-4xl font-bold mb-6">Be More Than Your Posts</h2>
+                    <p class="text-gray-300 mb-8 max-w-2xl mx-auto text-xl">
+                        Let your followers interact with your digital self even when you're offline
+                    </p>
+                    <div class="flex flex-wrap justify-center gap-4 mb-4">
+                        <a href="/login"
+                            class="bg-blue-600 hover:bg-blue-700 px-10 py-5 rounded-full font-bold text-xl transition-all button-glow">
+                            Create Digital Self
+                        </a>
+                        <a href="https://github.com/janwilmake/xyself" target="_blank" rel="noopener noreferrer"
+                            class="bg-white/10 hover:bg-white/20 px-8 py-4 rounded-full font-medium text-lg transition-all flex items-center gap-2">
+                            View Source
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path fill-rule="evenodd"
+                                    d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </a>
+                    </div>
+                    <p class="text-sm text-gray-400">
+                        By creating your digital self, you agree to our <a href="/tos.html"
+                            class="text-blue-400 underline hover:text-blue-300">Terms and Conditions</a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="text-center text-gray-500 border-t border-white/10 pt-8">
+                <div class="flex justify-center gap-6 mb-6">
+                    <a href="https://x.com/janwilmake" class="hover:text-white transition-colors" target="_blank"
+                        rel="noopener noreferrer" aria-label="Follow on X">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path
+                                d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                        </svg>
+                    </a>
+                    <a href="https://github.com/janwilmake/xyself" class="hover:text-white transition-colors"
+                        target="_blank" rel="noopener noreferrer" aria-label="View on GitHub">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path fill-rule="evenodd"
+                                d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                                clip-rule="evenodd" />
+                        </svg>
+                    </a>
+                </div>
+                <p class="text-sm">
+                    © 2025 XYSelf. All rights reserved. Not affiliated with X Corp.
+                </p>
+            </footer>
+        </div>
+    </main>
+
+    <script>
+        // Check authentication status
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/', {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await response.json();
+
+                const navAuth = document.getElementById('nav-auth');
+                if (data.authenticated_user) {
+                    navAuth.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <img src="${data.authenticated_user.avatar}" class="w-8 h-8 rounded-full">
+                            <span class="text-sm">${data.authenticated_user.username}</span>
+                            <a href="/dashboard" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition-all">Dashboard</a>
+                            <a href="/logout" class="text-red-400 hover:underline text-sm">Logout</a>
+                        </div>
+                    `;
+                } else {
+                    navAuth.innerHTML = `
+                        <a href="/login" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-medium transition-all">Login</a>
+                    `;
+                }
+            } catch (error) {
+                console.error('Failed to check auth status:', error);
+            }
+        }
+
+        // Handle try button
+        function handleTry() {
+            const username = document.getElementById('username-input').value.trim();
+            if (username) {
+                window.open(`/${username}`, '_blank');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuthStatus();
+
+            // Setup event listeners
+            document.getElementById('try-btn').addEventListener('click', handleTry);
+            document.getElementById('username-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleTry();
+            });
+        });
+    </script>
+</body>
+
+</html>

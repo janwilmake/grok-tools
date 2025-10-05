@@ -1,0 +1,17 @@
+{
+  "$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+  "name": "grok-tools",
+  "compatibility_date": "2025-10-01",
+  "routes": [
+    {
+      "custom_domain": true,
+      "pattern": "grok-tools.com"
+    },
+    {
+      "custom_domain": true,
+      "pattern": "www.grok-tools.com"
+    }
+  ],
+  "dev": { "port": 3000 },
+  "assets": { "directory": "./" }
+}

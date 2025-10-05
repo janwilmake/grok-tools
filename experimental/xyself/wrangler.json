@@ -1,0 +1,16 @@
+{
+  "name": "xyself",
+  "compatibility_date": "2025-01-27",
+  "main": "main.ts",
+  "assets": { "directory": "./" },
+  "kv_namespaces": [
+    {
+      "binding": "USER_DATA",
+      "id": "84ec5ee3a19f459abf37e405cb789dae"
+    }
+  ],
+  "routes": [
+    { "pattern": "xyself.com", "custom_domain": true },
+    { "pattern": "www.xyself.com", "custom_domain": true }
+  ]
+}

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grok Tools - Use X with AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'x-black': '#000000',
+                        'x-blue': '#1DA1F2',
+                        'x-dark-gray': '#15202B',
+                        'x-gray': '#657786',
+                        'x-light-gray': '#AAB8C2',
+                        'x-white': '#FFFFFF',
+                        'grok-green': '#00D084',
+                        'grok-purple': '#8B5CF6'
+                    },
+                    animation: {
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                        'float': 'float 6s ease-in-out infinite',
+                        'card-hover': 'cardHover 0.3s ease-in-out',
+                    },
+                    keyframes: {
+                        glow: {
+                            '0%': { boxShadow: '0 0 20px rgba(0, 208, 132, 0.3)' },
+                            '100%': { boxShadow: '0 0 40px rgba(0, 208, 132, 0.6)' }
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0px)' },
+                            '50%': { transform: 'translateY(-10px)' }
+                        },
+                        cardHover: {
+                            '0%': { transform: 'translateY(0px) scale(1)' },
+                            '100%': { transform: 'translateY(-5px) scale(1.02)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #000000 0%, #15202B 50%, #1a1a2e 100%);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(0, 208, 132, 0.3);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 208, 132, 0.2);
+        }
+
+        .shine {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 50%, rgba(255, 255, 255, 0.1) 100%);
+            background-size: 200% 200%;
+            animation: shine 3s ease-in-out infinite;
+        }
+
+        @keyframes shine {
+            0% {
+                background-position: -200% -200%;
+            }
+
+            50% {
+                background-position: 200% 200%;
+            }
+
+            100% {
+                background-position: -200% -200%;
+            }
+        }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #FFFFFF 0%, #00D084 50%, #8B5CF6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .grok-gradient {
+            background: linear-gradient(135deg, #00D084 0%, #8B5CF6 100%);
+        }
+
+        .button-hover {
+            transition: all 0.3s ease;
+        }
+
+        .button-hover:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 208, 132, 0.3);
+        }
+
+        .tool-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .tool-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(0, 208, 132, 0.4);
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 208, 132, 0.15);
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 9999px;
+            font-weight: 600;
+        }
+
+        .status-live {
+            background: rgba(0, 208, 132, 0.2);
+            color: #00D084;
+            border: 1px solid rgba(0, 208, 132, 0.3);
+        }
+
+        .status-beta {
+            background: rgba(139, 92, 246, 0.2);
+            color: #8B5CF6;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .status-coming {
+            background: rgba(171, 184, 194, 0.2);
+            color: #AAB8C2;
+            border: 1px solid rgba(171, 184, 194, 0.3);
+        }
+    </style>
+</head>
+
+<body class="gradient-bg min-h-screen font-sans antialiased">
+    <div class="container mx-auto px-6 py-12">
+        <!-- Header -->
+        <div class="text-center mb-16">
+            <!-- Logo/Brand -->
+            <div class="mb-8 animate-float">
+                <div
+                    class="inline-flex items-center justify-center w-20 h-20 glass-card rounded-2xl shine animate-glow">
+                    <div class="w-10 h-10 grok-gradient rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold text-xl">G</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hero Title -->
+            <h1 class="text-5xl md:text-7xl font-bold mb-6 text-gradient leading-tight">
+                Grok Tools
+            </h1>
+
+            <!-- Subtitle -->
+            <p class="text-2xl md:text-3xl font-light text-x-light-gray mb-4">
+                Use X with AI
+            </p>
+            <p class="text-xl text-x-gray mb-8">
+                Tools to supercharge your X experience using Grok and other AIs
+            </p>
+
+            <!-- Developer Link -->
+            <div class="mb-12">
+                <a href="https://x.com/janwilmake" target="_blank"
+                    class="inline-flex items-center text-x-light-gray hover:text-grok-green transition-colors duration-300">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                    Built by @janwilmake • Send feedback
+                </a>
+            </div>
+        </div>
+
+        <!-- Tools Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+            <!-- X CRM MCP -->
+            <div class="tool-card rounded-2xl p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 glass-card rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-grok-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                    </div>
+                    <span class="status-badge status-live">LIVE</span>
+                </div>
+                <h3 class="text-xl font-semibold text-white mb-2">X CRM</h3>
+                <p class="text-x-light-gray text-sm mb-4 line-clamp-3">
+                    Understand your network using AI. Make your AI understand and manage your X Network with intelligent
+                    insights.
+                </p>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-x-gray">MCP Server</span>
+                    <a href="https://crm.grok-tools.com" target="_blank"
+                        class="text-grok-green hover:text-white transition-colors duration-200 text-sm font-medium">
+                        Learn More →
+                    </a>
+                </div>
+            </div>
+
+            <!-- X Thread MCP -->
+            <div class="tool-card rounded-2xl p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 glass-card rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-grok-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                    </div>
+                    <span class="status-badge status-live">LIVE</span>
+                </div>
+                <h3 class="text-xl font-semibold text-white mb-2">X Thread</h3>
+                <p class="text-x-light-gray text-sm mb-4 line-clamp-3">
+                    Quick way of getting context for a thread. Live at xymake.com with full thread analysis and context
+                    extraction.
+                </p>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-x-gray">MCP Server • Web App</span>
+                    <a href="https://xymake.com" target="_blank"
+                        class="text-grok-green hover:text-white transition-colors duration-200 text-sm font-medium">
+                        Try Live →
+                    </a>
+                </div>
+            </div>
+
+            <!-- X Search MCP -->
+            <div class="tool-card rounded-2xl p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 glass-card rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-grok-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <span class="status-badge status-live">LIVE</span>
+                </div>
+                <h3 class="text-xl font-semibold text-white mb-2">X Search</h3>
+                <p class="text-x-light-gray text-sm mb-4 line-clamp-3">
+                    Search over all of Twitter and use it as context. Powerful search capabilities for AI-powered
+                    analysis.
+                </p>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-x-gray">MCP Server</span>
+                    <a href="https://search.grok-tools.com" target="_blank"
+                        class="text-grok-green hover:text-white transition-colors duration-200 text-sm font-medium">
+                        Learn More →
+                    </a>
+                </div>
+            </div>
+
+            <!-- X Timeline MCP -->
+            <div class="tool-card rounded-2xl p-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="w-12 h-12 glass-card rounded-xl flex items-center justify-center">
+                        <svg class="w-6 h-6 text-x-gray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                    <span class="status-badge status-coming">COMING SOON</span>
+                </div>
+                <h3 class="text-xl font-semibold text-white mb-2">X Timeline</h3>
+                <p class="text-x-light-gray text-sm mb-4 line-clamp-3">
+                    A way to easily get your entire timeline and search over it to use with AI. Full timeline analysis
+                    and insights.
+                </p>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs text-x-gray">MCP Server</span>
+                    <span class="text-x-gray text-sm">In Development</span>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- How it Works Section -->
+        <div class="text-center mt-20 mb-16">
+            <h2 class="text-3xl font-bold text-white mb-8">Works with Your Favorite AI Tools</h2>
+            <div class="max-w-4xl mx-auto">
+                <div class="glass-card rounded-2xl p-8">
+                    <div class="flex flex-wrap justify-center items-center gap-6 mb-6">
+                        <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=32" alt="Cursor"
+                            class="w-8 h-8 rounded">
+                        <img src="https://www.google.com/s2/favicons?domain=code.visualstudio.com&sz=32" alt="VS Code"
+                            class="w-8 h-8 rounded">
+                        <img src="https://www.google.com/s2/favicons?domain=claude.ai&sz=32" alt="Claude"
+                            class="w-8 h-8 rounded">
+                        <img src="https://www.google.com/s2/favicons?domain=codeium.com&sz=32" alt="Windsurf"
+                            class="w-8 h-8 rounded">
+                        <img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=32" alt="Gemini CLI"
+                            class="w-8 h-8 rounded">
+                        <img src="https://www.google.com/s2/favicons?domain=chatgpt.com&sz=32" alt="ChatGPT"
+                            class="w-8 h-8 rounded bg-white p-1">
+                    </div>
+                    <p class="text-x-light-gray text-lg">
+                        Connect these tools with your favorite AI assistants through MCP (Model Context Protocol)
+                        servers and direct integrations.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CTA Section -->
+        <div class="text-center">
+            <h2 class="text-3xl font-bold text-white mb-4">Ready to Supercharge Your X Experience?</h2>
+            <p class="text-x-light-gray text-lg mb-8 max-w-2xl mx-auto">
+                Get started with any of our tools and transform how you interact with X using AI.
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <a href="https://github.com/janwilmake/grok-tools" target="_blank"
+                    class="button-hover grok-gradient text-white font-semibold py-4 px-8 rounded-full inline-flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+                    </svg>
+                    View on GitHub
+                </a>
+
+                <a href="https://x.com/janwilmake" target="_blank"
+                    class="button-hover border-2 border-grok-green text-grok-green hover:bg-grok-green hover:text-white font-semibold py-4 px-8 rounded-full inline-flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                    Follow for Updates
+                </a>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-16 opacity-60">
+            <p class="text-x-gray text-sm">
+                Open source tools for the AI-powered future of social media
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

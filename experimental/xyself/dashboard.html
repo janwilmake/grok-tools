@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-black">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - XYSelf</title>
+    <meta name="description" content="Manage your XYSelf AI clone settings and profile data." />
+    <meta name="robots" content="noindex, nofollow" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+        body {
+            font-family: "Inter", sans-serif;
+        }
+
+        .xy-gradient {
+            background: linear-gradient(135deg, #000000 0%, #121212 100%);
+        }
+
+        .xy-border {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .button-glow:hover {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .success-border {
+            border-color: rgba(34, 197, 94, 0.5);
+        }
+
+        .error-border {
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+    </style>
+</head>
+
+<body class="text-white">
+    <main class="min-h-screen xy-gradient">
+        <!-- Navigation -->
+        <nav class="w-full p-4 xy-border border-b">
+            <div class="max-w-4xl mx-auto flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <a href="/" class="text-2xl font-bold hover:text-blue-400 transition-colors">XYSelf</a>
+                    <span class="text-gray-400">Dashboard</span>
+                </div>
+                <div id="nav-auth" class="flex items-center gap-4">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-4xl mx-auto px-4 py-8">
+            <!-- Header -->
+            <div class="text-center mb-12">
+                <h1 class="text-4xl md:text-6xl font-bold mb-4">Your Digital Self</h1>
+                <p class="text-xl text-gray-300">Manage your AI clone and profile data</p>
+
+                <!-- Auth Status -->
+                <div id="auth-status" class="mt-6 p-4 xy-border rounded-lg bg-white/5">
+                    <span class="text-gray-400">Loading...</span>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid md:grid-cols-3 gap-4 mb-8">
+                <a href="#profile-section"
+                    class="xy-border rounded-lg p-6 bg-white/5 hover:bg-white/10 transition-colors text-center">
+                    <div class="text-blue-400 mb-2">
+                        <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </div>
+                    <h3 class="font-medium">Edit Profile</h3>
+                </a>
+                <button id="view-clone-btn"
+                    class="xy-border rounded-lg p-6 bg-white/5 hover:bg-white/10 transition-colors text-center">
+                    <div class="text-green-400 mb-2">
+                        <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                    </div>
+                    <h3 class="font-medium">View Your Clone</h3>
+                </button>
+                <button id="chat-clone-btn"
+                    class="xy-border rounded-lg p-6 bg-white/5 hover:bg-white/10 transition-colors text-center">
+                    <div class="text-purple-400 mb-2">
+                        <svg class="w-8 h-8 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                        </svg>
+                    </div>
+                    <h3 class="font-medium">Chat with Clone</h3>
+                </button>
+            </div>
+
+            <!-- Search Section -->
+            <div class="xy-border rounded-xl p-8 bg-white/5 mb-8">
+                <h2 class="text-2xl font-bold mb-6">Look Up Any User</h2>
+                <div class="flex gap-4 mb-4">
+                    <input type="text" id="username-input" placeholder="Enter GitHub username"
+                        class="flex-1 px-4 py-3 bg-black/50 xy-border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button id="lookup-btn"
+                        class="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium transition-all button-glow">
+                        Lookup
+                    </button>
+                </div>
+                <p class="text-sm text-gray-400">
+                    Search for any GitHub username to see their profile data and X username mapping
+                </p>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" class="hidden">
+                <!-- User Profile Display -->
+                <div id="profile-display" class="xy-border rounded-xl p-8 bg-white/5 mb-8">
+                    <div class="flex items-start gap-6 mb-6">
+                        <img id="profile-picture" class="w-20 h-20 rounded-full xy-border" src="" alt="Profile">
+                        <div class="flex-1">
+                            <h3 id="profile-username" class="text-2xl font-bold"></h3>
+                            <p id="profile-bio" class="text-gray-300 mt-2"></p>
+                            <div class="flex gap-4 mt-4 flex-wrap">
+                                <a id="github-link" href="" target="_blank"
+                                    class="text-blue-400 hover:underline flex items-center gap-2">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path fill-rule="evenodd"
+                                            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                    GitHub Profile
+                                </a>
+                                <a id="x-link" href="" target="_blank"
+                                    class="text-blue-400 hover:underline flex items-center gap-2 hidden">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path
+                                            d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                    </svg>
+                                    X Profile
+                                </a>
+                                <button id="view-user-clone-btn"
+                                    class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg font-medium transition-all button-glow flex items-center gap-2 hidden">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                    View Clone
+                                </button>
+                                <button id="chat-user-clone-btn"
+                                    class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg font-medium transition-all button-glow flex items-center gap-2 hidden">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                                    </svg>
+                                    Chat with Clone
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Sources -->
+                    <div id="data-sources" class="text-sm text-gray-400 mb-4"></div>
+
+                    <!-- Context Preview -->
+                    <div id="context-section" class="mt-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="font-medium text-gray-300">AI Context:</h4>
+                            <button id="toggle-context" class="text-blue-400 hover:underline text-sm">Show Full
+                                Context</button>
+                        </div>
+                        <div id="context-display"
+                            class="text-sm bg-black/30 p-4 rounded-lg xy-border max-h-32 overflow-hidden relative">
+                            <pre id="context-text" class="whitespace-pre-wrap text-gray-300 font-mono text-xs"></pre>
+                            <div id="context-fade"
+                                class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-black/30 to-transparent">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Edit Form -->
+                <div id="edit-form" class="xy-border rounded-xl p-8 bg-white/5">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-2xl font-bold" id="profile-section">Update Profile Data</h3>
+                        <div id="form-type-indicator" class="px-3 py-1 rounded-full text-sm font-medium"></div>
+                    </div>
+
+                    <form id="update-form" class="space-y-6">
+                        <div>
+                            <label for="x-username" class="block text-sm font-medium text-gray-300 mb-2">
+                                X Username
+                            </label>
+                            <input type="text" id="x-username" name="x_username"
+                                placeholder="Enter X username (without @)" maxlength="15" pattern="[a-zA-Z0-9_]{1,15}"
+                                class="w-full px-4 py-3 bg-black/50 xy-border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <p class="text-xs text-gray-400 mt-1">Leave empty to clear. Only letters, numbers, and
+                                underscores allowed.</p>
+                        </div>
+
+                        <div>
+                            <label for="bio" class="block text-sm font-medium text-gray-300 mb-2">
+                                Bio Override
+                            </label>
+                            <textarea id="bio" name="bio" rows="3" placeholder="Custom bio text" maxlength="500"
+                                class="w-full px-4 py-3 bg-black/50 xy-border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                            <p class="text-xs text-gray-400 mt-1">Leave empty to use GitHub bio. <span
+                                    id="bio-count">0</span>/500 characters.</p>
+                        </div>
+
+                        <div>
+                            <label for="context" class="block text-sm font-medium text-gray-300 mb-2">
+                                AI Context (Markdown)
+                            </label>
+                            <textarea id="context" name="context" rows="8" placeholder="Markdown content for AI context"
+                                maxlength="50000"
+                                class="w-full px-4 py-3 bg-black/50 xy-border rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"></textarea>
+                            <p class="text-xs text-gray-400 mt-1">
+                                Markdown content that will be used as context for your AI clone.
+                                <span id="context-count">0</span>/50,000 characters.
+                            </p>
+                        </div>
+
+                        <div class="flex gap-4 flex-wrap">
+                            <button type="submit" id="submit-btn"
+                                class="bg-green-600 hover:bg-green-700 px-6 py-3 rounded-lg font-medium transition-all button-glow flex items-center gap-2">
+                                <span>Update Data</span>
+                                <svg class="w-5 h-5 hidden" id="loading-spinner" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                            </button>
+                            <button type="button" id="clear-form-btn"
+                                class="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg font-medium transition-all">
+                                Clear Form
+                            </button>
+                            <button type="button" id="reset-form-btn"
+                                class="bg-yellow-600 hover:bg-yellow-700 px-6 py-3 rounded-lg font-medium transition-all">
+                                Reset to Current
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Loading/Error Messages -->
+            <div id="message-area" class="fixed bottom-4 right-4 max-w-md z-50"></div>
+        </div>
+    </main>
+
+    <script>
+        let currentUser = null;
+        let currentProfile = null;
+        let currentUsername = null;
+        let contextExpanded = false;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAuthStatus();
+            setupEventListeners();
+
+            // Auto-load user's own profile if authenticated
+            if (currentUser) {
+                document.getElementById('username-input').value = currentUser.username;
+                await handleLookup();
+            }
+        });
+
+        // Setup event listeners
+        function setupEventListeners() {
+            document.getElementById('lookup-btn').addEventListener('click', handleLookup);
+            document.getElementById('username-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleLookup();
+            });
+            document.getElementById('update-form').addEventListener('submit', handleFormSubmit);
+            document.getElementById('clear-form-btn').addEventListener('click', clearForm);
+            document.getElementById('reset-form-btn').addEventListener('click', resetForm);
+            document.getElementById('view-clone-btn').addEventListener('click', () => {
+                if (currentUser) window.open(`/${currentUser.username}`, '_blank');
+            });
+            document.getElementById('chat-clone-btn').addEventListener('click', () => {
+                if (currentUser && currentProfile && currentProfile.context) {
+                    const encodedContext = encodeURIComponent(currentProfile.context);
+                    window.open(`https://letmeprompt.com/?q=${encodedContext}`, '_blank');
+                }
+            });
+            document.getElementById('view-user-clone-btn').addEventListener('click', () => {
+                if (currentUsername) window.open(`/${currentUsername}`, '_blank');
+            });
+            document.getElementById('chat-user-clone-btn').addEventListener('click', handleChatUserClone);
+            document.getElementById('toggle-context').addEventListener('click', toggleContext);
+
+            // Character counters
+            document.getElementById('bio').addEventListener('input', updateBioCount);
+            document.getElementById('context').addEventListener('input', updateContextCount);
+
+            // Input validation
+            document.getElementById('x-username').addEventListener('input', validateXUsername);
+        }
+
+        // Character counters
+        function updateBioCount() {
+            const bio = document.getElementById('bio');
+            const count = document.getElementById('bio-count');
+            count.textContent = bio.value.length;
+
+            if (bio.value.length > 500) {
+                count.className = 'text-red-400';
+                bio.classList.add('error-border');
+            } else {
+                count.className = 'text-gray-400';
+                bio.classList.remove('error-border');
+            }
+        }
+
+        function updateContextCount() {
+            const context = document.getElementById('context');
+            const count = document.getElementById('context-count');
+            count.textContent = context.value.length;
+
+            if (context.value.length > 50000) {
+                count.className = 'text-red-400';
+                context.classList.add('error-border');
+            } else {
+                count.className = 'text-gray-400';
+                context.classList.remove('error-border');
+            }
+        }
+
+        // Input validation
+        function validateXUsername() {
+            const input = document.getElementById('x-username');
+            const value = input.value;
+
+            if (value && !/^[a-zA-Z0-9_]{1,15}$/.test(value)) {
+                input.classList.add('error-border');
+            } else {
+                input.classList.remove('error-border');
+            }
+        }
+
+        // Toggle context display
+        function toggleContext() {
+            const contextDisplay = document.getElementById('context-display');
+            const toggleBtn = document.getElementById('toggle-context');
+            const fade = document.getElementById('context-fade');
+
+            if (contextExpanded) {
+                contextDisplay.classList.add('max-h-32', 'overflow-hidden');
+                fade.classList.remove('hidden');
+                toggleBtn.textContent = 'Show Full Context';
+                contextExpanded = false;
+            } else {
+                contextDisplay.classList.remove('max-h-32', 'overflow-hidden');
+                fade.classList.add('hidden');
+                toggleBtn.textContent = 'Collapse Context';
+                contextExpanded = true;
+            }
+        }
+
+        // Handle chat with user clone
+        function handleChatUserClone() {
+            if (!currentProfile || !currentProfile.context) {
+                showMessage('No context available for this user', 'error');
+                return;
+            }
+
+            const encodedContext = encodeURIComponent(currentProfile.context);
+            window.open(`https://letmeprompt.com/?q=${encodedContext}`, '_blank');
+        }
+
+        // Check authentication status
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch('/auth', {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await response.json();
+                currentUser = data.authenticated_user;
+
+                const authStatus = document.getElementById('auth-status');
+                const navAuth = document.getElementById('nav-auth');
+
+                if (currentUser) {
+                    authStatus.innerHTML = `
+                        <div class="flex items-center justify-center gap-3">
+                            <img src="${currentUser.avatar}" class="w-8 h-8 rounded-full">
+                            <span class="text-green-400">Logged in as ${currentUser.username}</span>
+                        </div>
+                    `;
+
+                    navAuth.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <img src="${currentUser.avatar}" class="w-8 h-8 rounded-full">
+                            <span class="text-sm">${currentUser.username}</span>
+                            <a href="/logout" class="text-red-400 hover:underline text-sm">Logout</a>
+                        </div>
+                    `;
+                } else {
+                    // Redirect to login if not authenticated
+                    window.location.href = '/login?redirect_to=/dashboard';
+                }
+            } catch (error) {
+                showMessage('Failed to check auth status', 'error');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 2000);
+            }
+        }
+
+        // Handle user lookup
+        async function handleLookup() {
+            const username = document.getElementById('username-input').value.trim();
+            if (!username) {
+                showMessage('Please enter a username', 'error');
+                return;
+            }
+
+            currentUsername = username;
+            setLoading(true);
+            showMessage('Looking up user...', 'info');
+
+            try {
+                const response = await fetch(`/${username}`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to fetch user data');
+                }
+
+                currentProfile = data;
+                displayProfile(data);
+                setupForm(data);
+                document.getElementById('results-section').classList.remove('hidden');
+                showMessage('User data loaded', 'success');
+            } catch (error) {
+                showMessage(error.message, 'error');
+                document.getElementById('results-section').classList.add('hidden');
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // Display user profile
+        function displayProfile(data) {
+            // Profile picture
+            const profilePic = document.getElementById('profile-picture');
+            if (data.profile_picture) {
+                profilePic.src = data.profile_picture;
+                profilePic.style.display = 'block';
+            } else {
+                profilePic.style.display = 'none';
+            }
+
+            // Username
+            document.getElementById('profile-username').textContent = data.github_username;
+
+            // Bio
+            const bioEl = document.getElementById('profile-bio');
+            bioEl.textContent = data.bio || 'No bio available';
+
+            // GitHub link
+            const githubLink = document.getElementById('github-link');
+            githubLink.href = `https://github.com/${data.github_username}`;
+
+            // X link
+            const xLink = document.getElementById('x-link');
+            if (data.x_username) {
+                xLink.href = `https://x.com/${data.x_username}`;
+                xLink.classList.remove('hidden');
+            } else {
+                xLink.classList.add('hidden');
+            }
+
+            // Clone buttons
+            const viewCloneBtn = document.getElementById('view-user-clone-btn');
+            const chatCloneBtn = document.getElementById('chat-user-clone-btn');
+
+            if (data.context && data.context.trim()) {
+                viewCloneBtn.classList.remove('hidden');
+                chatCloneBtn.classList.remove('hidden');
+            } else {
+                viewCloneBtn.classList.add('hidden');
+                chatCloneBtn.classList.add('hidden');
+            }
+
+            // Data sources
+            const sources = data._metadata?.sources || {};
+            const dataSourcesEl = document.getElementById('data-sources');
+            const sourceTexts = [];
+            if (sources.github) sourceTexts.push('📊 GitHub data');
+            if (sources.public_override) sourceTexts.push('🌐 Public override');
+            if (sources.authorized_override) sourceTexts.push('🔐 Authorized override');
+            dataSourcesEl.textContent = `Data sources: ${sourceTexts.join(', ')}`;
+
+            // Context display
+            const contextTextEl = document.getElementById('context-text');
+            const toggleBtn = document.getElementById('toggle-context');
+
+            if (data.context && data.context.trim()) {
+                contextTextEl.textContent = data.context;
+                contextTextEl.className = 'whitespace-pre-wrap text-gray-300 font-mono text-xs';
+                toggleBtn.style.display = 'inline';
+            } else {
+                contextTextEl.textContent = 'No context available';
+                contextTextEl.className = 'whitespace-pre-wrap text-gray-500 font-mono text-xs italic';
+                toggleBtn.style.display = 'none';
+            }
+
+            // Reset context expansion state
+            contextExpanded = false;
+            document.getElementById('context-display').classList.add('max-h-32', 'overflow-hidden');
+            document.getElementById('context-fade').classList.remove('hidden');
+            toggleBtn.textContent = 'Show Full Context';
+        }
+
+        // Setup form based on current user and profile
+        function setupForm(data) {
+            const isOwnProfile = currentUser && currentUser.username === data.github_username;
+            const formTypeIndicator = document.getElementById('form-type-indicator');
+
+            if (isOwnProfile) {
+                formTypeIndicator.textContent = 'Authorized Update';
+                formTypeIndicator.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-600/20 text-green-400';
+            } else {
+                formTypeIndicator.textContent = 'Public Update';
+                formTypeIndicator.className = 'px-3 py-1 rounded-full text-sm font-medium bg-blue-600/20 text-blue-400';
+            }
+
+            // Populate form with current data
+            populateForm(data);
+            updateBioCount();
+            updateContextCount();
+        }
+
+        // Populate form with data
+        function populateForm(data) {
+            document.getElementById('x-username').value = data.x_username || '';
+            document.getElementById('bio').value = data.bio || '';
+            document.getElementById('context').value = data.context || '';
+        }
+
+        // Handle form submission
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+
+            if (!currentUsername) {
+                showMessage('No user selected', 'error');
+                return;
+            }
+
+            // Validate form
+            const xUsername = document.getElementById('x-username').value.trim();
+            const bio = document.getElementById('bio').value;
+            const context = document.getElementById('context').value;
+
+            if (xUsername && !/^[a-zA-Z0-9_]{1,15}$/.test(xUsername)) {
+                showMessage('Invalid X username format', 'error');
+                return;
+            }
+
+            if (bio.length > 500) {
+                showMessage('Bio is too long (max 500 characters)', 'error');
+                return;
+            }
+
+            if (context.length > 50000) {
+                showMessage('Context is too long (max 50,000 characters)', 'error');
+                return;
+            }
+
+            const formData = new FormData(e.target);
+            const data = {
+                x_username: formData.get('x_username') || null,
+                bio: formData.get('bio') || null,
+                context: formData.get('context') || null
+            };
+
+            setFormLoading(true);
+            showMessage('Updating data...', 'info');
+
+            try {
+                const response = await fetch(`/${currentUsername}/set`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to update data');
+                }
+
+                showMessage(`${result.key_type} data updated successfully!`, 'success');
+
+                // Refresh the profile data
+                await handleLookup();
+            } catch (error) {
+                showMessage(error.message, 'error');
+            } finally {
+                setFormLoading(false);
+            }
+        }
+
+        // Clear form
+        function clearForm() {
+            document.getElementById('update-form').reset();
+            updateBioCount();
+            updateContextCount();
+        }
+
+        // Reset form to current data
+        function resetForm() {
+            if (currentProfile) {
+                populateForm(currentProfile);
+                updateBioCount();
+                updateContextCount();
+            }
+        }
+
+        // Set loading state
+        function setLoading(loading) {
+            const lookupBtn = document.getElementById('lookup-btn');
+            const usernameInput = document.getElementById('username-input');
+
+            if (loading) {
+                lookupBtn.textContent = 'Loading...';
+                lookupBtn.disabled = true;
+                usernameInput.disabled = true;
+            } else {
+                lookupBtn.textContent = 'Lookup';
+                lookupBtn.disabled = false;
+                usernameInput.disabled = false;
+            }
+        }
+
+        // Set form loading state
+        function setFormLoading(loading) {
+            const submitBtn = document.getElementById('submit-btn');
+            const spinner = document.getElementById('loading-spinner');
+            const form = document.getElementById('update-form');
+
+            if (loading) {
+                submitBtn.querySelector('span').textContent = 'Updating...';
+                spinner.classList.remove('hidden');
+                form.classList.add('loading');
+            } else {
+                submitBtn.querySelector('span').textContent = 'Update Data';
+                spinner.classList.add('hidden');
+                form.classList.remove('loading');
+            }
+        }
+
+        // Show message
+        function showMessage(text, type = 'info') {
+            const messageArea = document.getElementById('message-area');
+            const message = document.createElement('div');
+
+            const colors = {
+                info: 'bg-blue-600',
+                success: 'bg-green-600',
+                error: 'bg-red-600'
+            };
+
+            message.className = `${colors[type]} text-white px-4 py-3 rounded-lg mb-2 opacity-0 transition-all duration-300 transform translate-x-full`;
+            message.textContent = text;
+
+            messageArea.appendChild(message);
+
+            // Slide in
+            setTimeout(() => {
+                message.classList.remove('translate-x-full');
+                message.classList.add('opacity-100');
+            }, 100);
+
+            // Remove after 5 seconds
+            setTimeout(() => {
+                message.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => message.remove(), 300);
+            }, 5000);
+        }
+    </script>
+</body>
+
+</html>

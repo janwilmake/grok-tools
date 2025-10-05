@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "smootherauth-github": "^0.0.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250601.0"
+  }
+}
