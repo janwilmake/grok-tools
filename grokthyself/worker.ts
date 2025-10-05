@@ -1065,17 +1065,14 @@ export default {
 
             // Inject user data into the template
             const pricingPageWithData = pricingTemplate.replace(
-              "</body>",
-              `<script>
-        window.data = {
+              "const userData = {};",
+              `const userData = {
           username: "${ctx.user.username}",
           isPremium: ${stats.isPremium},
           balance: ${stats.balance},
           postCount: ${stats.postCount},
           scrapeStatus: "${stats.scrapeStatus}"
-        };
-      </script>
-      </body>`
+        };`
             );
 
             return new Response(pricingPageWithData, {
