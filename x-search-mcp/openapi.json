@@ -8,7 +8,6 @@
     },
     "version": "1.0.0"
   },
-  "servers": [{ "url": "https://api.twitterapi.io" }],
   "security": [{ "ApiKeyAuth": [] }],
   "paths": {
     "/twitter/tweet/advanced_search": {

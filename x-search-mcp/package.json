@@ -1,5 +1,5 @@
 {
   "dependencies": {
-    "with-mcp": "^0.0.15"
+    "with-mcp": "0.0.18"
   }
 }

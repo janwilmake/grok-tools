@@ -1,9 +1,9 @@
 Tools to use X using Grok (or other AIs)
 
 - [xymake](xymake) - quick way of getting context for a thread (https://xymake.com)
+- [xyelf](xyself) - **coming soon**: a way to easily get your entire timeline and search over it to use with AI
 - [x-crm-mcp](x-crm-mcp) - understand your network using AI (https://crm.grok-tools.com)
 - [x-search-mcp](x-search-mcp) - search over all of X and use it as context
-- [x-timeline-mcp](x-timeline-mcp) - **coming soon**: a way to easily get your entire timeline and search over it to use with AI
 
 Utilities
 
