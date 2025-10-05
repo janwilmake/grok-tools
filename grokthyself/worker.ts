@@ -7,11 +7,31 @@ import { Queryable, studioMiddleware } from "queryable-object";
 //@ts-ignore
 import loginPage from "./login-template.html";
 
-const DO_NAME_PREFIX = "v3:";
+const DO_NAME_PREFIX = "v4:";
 
 export interface Env {
   USER_DO: DurableObjectNamespace<UserDO>;
   X_API_KEY: string;
+}
+
+// Add this interface to your existing interfaces
+interface PostSearchQuery {
+  q?: string;
+  maxTokens?: number;
+}
+
+interface ParsedQuery {
+  from?: string;
+  before?: Date;
+  after?: Date;
+  keywords: string[];
+  operators: ("AND" | "OR")[];
+}
+
+interface ConversationThread {
+  conversationId: string;
+  posts: Post[];
+  tokenCount: number;
 }
 
 // API Response Types based on OpenAPI spec
@@ -409,6 +429,244 @@ export class UserDO extends DurableObject<Env> {
     );
   }
 
+  // Add these methods to your UserDO class
+
+  private parseSearchQuery(query: string): ParsedQuery {
+    const parsed: ParsedQuery = {
+      keywords: [],
+      operators: [],
+    };
+
+    if (!query) return parsed;
+
+    // Extract from: parameter
+    const fromMatch = query.match(/from:(\w+)/i);
+    if (fromMatch) {
+      parsed.from = fromMatch[1];
+      query = query.replace(/from:\w+/gi, "").trim();
+    }
+
+    // Extract before: parameter
+    const beforeMatch = query.match(/before:(\d{4}-\d{2}-\d{2})/i);
+    if (beforeMatch) {
+      parsed.before = new Date(beforeMatch[1]);
+      query = query.replace(/before:\d{4}-\d{2}-\d{2}/gi, "").trim();
+    }
+
+    // Extract after: parameter
+    const afterMatch = query.match(/after:(\d{4}-\d{2}-\d{2})/i);
+    if (afterMatch) {
+      parsed.after = new Date(afterMatch[1]);
+      query = query.replace(/after:\d{4}-\d{2}-\d{2}/gi, "").trim();
+    }
+
+    // Extract AND/OR operators and remaining keywords
+    const tokens = query.split(/\s+/).filter((token) => token.length > 0);
+
+    for (const token of tokens) {
+      if (token.toUpperCase() === "AND" || token.toUpperCase() === "OR") {
+        parsed.operators.push(token.toUpperCase() as "AND" | "OR");
+      } else if (token.length > 0) {
+        parsed.keywords.push(token.toLowerCase());
+      }
+    }
+
+    return parsed;
+  }
+
+  private buildSearchSql(
+    userId: string,
+    parsedQuery: ParsedQuery
+  ): { sql: string; params: any[] } {
+    let sql = `SELECT DISTINCT conversation_id FROM posts WHERE user_id = ?`;
+    const params: any[] = [userId];
+
+    // Add from filter
+    if (parsedQuery.from) {
+      sql += ` AND LOWER(author_username) = LOWER(?)`;
+      params.push(parsedQuery.from);
+    }
+
+    // Add date filters
+    if (parsedQuery.before) {
+      sql += ` AND date(created_at) < ?`;
+      params.push(parsedQuery.before.toISOString().split("T")[0]);
+    }
+
+    if (parsedQuery.after) {
+      sql += ` AND date(created_at) > ?`;
+      params.push(parsedQuery.after.toISOString().split("T")[0]);
+    }
+
+    // Add keyword filters
+    if (parsedQuery.keywords.length > 0) {
+      const keywordConditions: string[] = [];
+
+      for (const keyword of parsedQuery.keywords) {
+        keywordConditions.push(`LOWER(text) LIKE ?`);
+        params.push(`%${keyword}%`);
+      }
+
+      if (keywordConditions.length > 0) {
+        // Default to AND if no operators specified, otherwise use the operators
+        const operator =
+          parsedQuery.operators.length > 0
+            ? parsedQuery.operators[0] === "OR"
+              ? " OR "
+              : " AND "
+            : " AND ";
+
+        sql += ` AND (${keywordConditions.join(operator)})`;
+      }
+    }
+
+    return { sql, params };
+  }
+
+  private estimateTokens(text: string): number {
+    return Math.ceil(text.length / 5);
+  }
+
+  private convertThreadToMarkdown(thread: ConversationThread): string {
+    const sortedPosts = thread.posts.sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+
+    let markdown = `# Thread\n\n`;
+
+    for (const post of sortedPosts) {
+      const date = new Date(post.created_at).toISOString().slice(0, 10);
+      const isReply = post.is_reply ? "\t↳" : "";
+
+      markdown += `${isReply}@${post.author_username} (${date} ${
+        post.like_count > 0 ? `❤️ ${post.like_count}` : ""
+      }${
+        post.retweet_count > 0 ? ` 🔄 ${post.retweet_count}` : ""
+      }) - ${post.text.replaceAll("\n", "\t")}\n`;
+    }
+
+    return markdown + "\n\n";
+  }
+
+  async searchPosts(
+    userId: string,
+    searchQuery: PostSearchQuery
+  ): Promise<string> {
+    const maxTokens = searchQuery.maxTokens || 50000;
+    const parsedQuery = this.parseSearchQuery(searchQuery.q || "");
+
+    console.log("Parsed query:", parsedQuery);
+
+    // First, find matching conversation IDs
+    const { sql: searchSql, params: searchParams } = this.buildSearchSql(
+      userId,
+      parsedQuery
+    );
+
+    console.log("Search SQL:", searchSql, "Params:", searchParams);
+
+    const conversationResults = this.sql
+      .exec<{ conversation_id: string }>(searchSql, ...searchParams)
+      .toArray();
+
+    console.log(`Found ${conversationResults.length} matching conversations`);
+
+    if (conversationResults.length === 0) {
+      return "# No posts found\n\nYour search didn't match any posts.";
+    }
+
+    // Get conversation IDs
+    const conversationIds = conversationResults
+      .map((row) => row.conversation_id)
+      .filter((id) => id && id.trim() !== "");
+
+    if (conversationIds.length === 0) {
+      return "# No valid conversations found\n\nThe matching posts don't have valid conversation IDs.";
+    }
+
+    console.log("Valid conversation IDs:", conversationIds);
+
+    // Fetch all posts for these conversations
+    const placeholders = conversationIds.map(() => "?").join(",");
+    const allPostsResult = this.sql
+      .exec<Post>(
+        `SELECT * FROM posts WHERE user_id = ? AND conversation_id IN (${placeholders})`,
+        userId,
+        ...conversationIds
+      )
+      .toArray();
+
+    console.log(`Found ${allPostsResult.length} total posts in conversations`);
+
+    // Group posts by conversation and create threads
+    const conversationMap = new Map<string, Post[]>();
+
+    for (const post of allPostsResult) {
+      const conversationId = post.conversation_id || "unknown";
+      if (!conversationMap.has(conversationId)) {
+        conversationMap.set(conversationId, []);
+      }
+      conversationMap.get(conversationId)!.push(post);
+    }
+
+    // Convert to threads with token estimation
+    const threads: ConversationThread[] = [];
+    let totalTokens = 0;
+
+    for (const [conversationId, posts] of conversationMap) {
+      if (posts.length === 0) continue;
+
+      const thread: ConversationThread = {
+        conversationId,
+        posts,
+        tokenCount: 0,
+      };
+
+      // Estimate tokens for this thread
+      const markdown = this.convertThreadToMarkdown(thread);
+      thread.tokenCount = this.estimateTokens(markdown);
+
+      // Check if adding this thread would exceed token limit
+      if (totalTokens + thread.tokenCount <= maxTokens) {
+        threads.push(thread);
+        totalTokens += thread.tokenCount;
+      } else {
+        console.log(
+          `Stopping at thread ${conversationId} to stay within token limit`
+        );
+        break;
+      }
+    }
+
+    console.log(
+      `Selected ${threads.length} threads with ~${totalTokens} tokens`
+    );
+
+    // Sort threads by most recent post in each thread
+    threads.sort((a, b) => {
+      const latestA = Math.max(
+        ...a.posts.map((p) => new Date(p.created_at).getTime())
+      );
+      const latestB = Math.max(
+        ...b.posts.map((p) => new Date(p.created_at).getTime())
+      );
+      return latestB - latestA;
+    });
+
+    // Convert threads to markdown
+    let finalMarkdown = `# Search Results\n\n`;
+    finalMarkdown += `Query: \`${searchQuery.q || "all posts"}\`\n\n`;
+    finalMarkdown += `Found ${threads.length} conversation threads (estimated ${totalTokens} tokens)\n\n`;
+    finalMarkdown += `---\n\n`;
+
+    for (const thread of threads) {
+      finalMarkdown += this.convertThreadToMarkdown(thread);
+    }
+
+    return finalMarkdown;
+  }
+
   async ensureUserExists(authUser: UserContext["user"]): Promise<User> {
     // Insert user if not exists
     const existingUserResult = this.sql
@@ -487,13 +745,13 @@ export class UserDO extends DurableObject<Env> {
 
               if (
                 threadResponse.status === "success" &&
-                threadResponse.replies &&
-                threadResponse.replies.length > 0
+                threadResponse.tweets &&
+                threadResponse.tweets.length > 0
               ) {
                 console.log(
-                  `Found ${threadResponse.replies.length} replies for tweet ${tweet.id}`
+                  `Found ${threadResponse.tweets.length} replies for tweet ${tweet.id}`
                 );
-                for (const reply of threadResponse.replies) {
+                for (const reply of threadResponse.tweets) {
                   await this.storePost(userId, reply);
                 }
               }
@@ -564,9 +822,12 @@ export class UserDO extends DurableObject<Env> {
   }
 
   private async fetchThreadContext(
-    tweetId: string
+    tweetId: string,
+    cursor?: string
   ): Promise<ThreadContextResponse> {
-    const url = `https://api.twitterapi.io/twitter/tweet/thread_context?tweetId=${tweetId}`;
+    const baseUrl = `https://api.twitterapi.io/twitter/tweet/thread_context?tweetId=${tweetId}`;
+    const url = cursor ? `${baseUrl}&cursor=${cursor}` : baseUrl;
+
     console.log(`Fetching thread context from: ${url}`);
 
     const response = await fetch(url, {
@@ -587,6 +848,34 @@ export class UserDO extends DurableObject<Env> {
     }
 
     const data = (await response.json()) as ThreadContextResponse;
+
+    // If there are more pages, recursively fetch them
+    if (data.has_next_page && data.next_cursor) {
+      console.log(`Fetching next page with cursor: ${data.next_cursor}`);
+
+      try {
+        const nextPageData = await this.fetchThreadContext(
+          tweetId,
+          data.next_cursor
+        );
+
+        // Merge the tweets from subsequent pages
+        return {
+          ...data,
+          tweets: [...(data.tweets || []), ...(nextPageData.tweets || [])],
+          has_next_page: nextPageData.has_next_page,
+          next_cursor: nextPageData.next_cursor,
+        };
+      } catch (error) {
+        console.error(
+          `Failed to fetch next page for thread ${tweetId}:`,
+          error
+        );
+        // Return current data if next page fails
+        return data;
+      }
+    }
+
     return data;
   }
 
@@ -713,6 +1002,74 @@ export default {
         } catch (error) {
           console.error("Dashboard error:", error);
           return new Response("Error loading dashboard", { status: 500 });
+        }
+      }
+
+      if (url.pathname === "/posts") {
+        if (!ctx.authenticated) {
+          return new Response(
+            JSON.stringify({ error: "Authentication required" }),
+            {
+              status: 401,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
+        }
+
+        try {
+          // Get query parameters
+          const query = url.searchParams.get("q") || "";
+          const maxTokensParam = url.searchParams.get("maxTokens");
+          const maxTokens = maxTokensParam
+            ? parseInt(maxTokensParam, 10)
+            : 50000;
+
+          if (maxTokens < 1 || maxTokens > 5000000) {
+            return new Response(
+              JSON.stringify({
+                error: "maxTokens must be between 1 and 5000000",
+              }),
+              {
+                status: 400,
+                headers: { "Content-Type": "application/json" },
+              }
+            );
+          }
+
+          console.log(
+            `Posts search request: q="${query}", maxTokens=${maxTokens}`
+          );
+
+          // Get user's Durable Object
+          const userDO = env.USER_DO.get(
+            env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.id)
+          );
+
+          // Perform search
+          const markdown = await userDO.searchPosts(ctx.user.id, {
+            q: query,
+            maxTokens,
+          });
+
+          // Return as markdown
+          return new Response(markdown, {
+            headers: {
+              "Content-Type": "text/markdown; charset=utf-8",
+              "Content-Disposition": `inline; filename="posts-${Date.now()}.md"`,
+            },
+          });
+        } catch (error) {
+          console.error("Posts search error:", error);
+          return new Response(
+            JSON.stringify({
+              error: "Error searching posts",
+              details: error instanceof Error ? error.message : String(error),
+            }),
+            {
+              status: 500,
+              headers: { "Content-Type": "application/json" },
+            }
+          );
         }
       }
 
