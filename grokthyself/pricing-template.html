@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-amber-50">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing - Grok Thyself</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Crimson+Text:wght@400;600;700&family=Trajan+Pro:wght@400;700&display=swap");
+
+        body {
+            font-family: "Crimson Text", serif;
+            background-color: #f5e6d3;
+            background-image:
+                radial-gradient(circle at 25% 25%, rgba(139, 69, 19, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 75% 75%, rgba(160, 82, 45, 0.1) 0%, transparent 50%),
+                linear-gradient(90deg, rgba(210, 180, 140, 0.1) 1px, transparent 1px),
+                linear-gradient(rgba(210, 180, 140, 0.1) 1px, transparent 1px);
+            background-size:
+                200px 200px,
+                200px 200px,
+                20px 20px,
+                20px 20px;
+        }
+
+        .latin-title {
+            font-family: "Trajan Pro", "Crimson Text", serif;
+            font-size: clamp(2rem, 6vw, 3rem);
+            line-height: 1;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-shadow: 2px 2px 4px rgba(139, 69, 19, 0.3);
+            color: #8b4513;
+        }
+
+        .pricing-card {
+            background: rgba(255, 255, 255, 0.4);
+            border: 2px solid #8b4513;
+            border-radius: 1rem;
+            box-shadow: 0 4px 15px rgba(139, 69, 19, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 69, 19, 0.3);
+        }
+
+        .pricing-card.current-plan {
+            border-color: #d97706;
+            background: rgba(251, 191, 36, 0.2);
+            transform: scale(1.02);
+        }
+
+        .pricing-card.premium {
+            border-color: #d97706;
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.2) 100%);
+        }
+
+        .papyrus-button {
+            background: linear-gradient(145deg, #deb887, #d2b48c);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+                0 4px 12px rgba(139, 69, 19, 0.3);
+            border: 2px solid #8b4513;
+            color: #654321;
+            font-weight: 700;
+            padding: 1rem 2rem;
+            border-radius: 0.75rem;
+            transition: all 0.3s ease;
+            letter-spacing: 0.05em;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            width: 100%;
+        }
+
+        .papyrus-button:hover:not(:disabled):not(.disabled) {
+            background: linear-gradient(145deg, #d2b48c, #deb887);
+            transform: translateY(-2px);
+            text-decoration: none;
+        }
+
+        .papyrus-button.disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: linear-gradient(145deg, #a0a0a0, #909090);
+            border-color: #666;
+            color: #333;
+        }
+
+        .papyrus-button.current {
+            background: linear-gradient(145deg, #86efac, #4ade80);
+            border-color: #16a34a;
+            color: #166534;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.75rem;
+            color: #654321;
+        }
+
+        .feature-list li:before {
+            content: "✓";
+            color: #16a34a;
+            font-weight: bold;
+            margin-right: 0.75rem;
+            font-size: 1.1rem;
+        }
+
+        .current-plan-badge {
+            position: absolute;
+            top: -10px;
+            right: 20px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            padding: 0.25rem 1rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(217, 119, 6, 0.3);
+        }
+
+        .premium-badge {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+            color: white;
+            padding: 0.25rem 1rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+        }
+    </style>
+</head>
+
+<body class="text-amber-900">
+    <main class="min-h-screen px-4 py-8">
+        <div class="max-w-6xl mx-auto">
+            <!-- Header -->
+            <div class="text-center mb-12">
+                <h1 class="latin-title mb-4">PRICING</h1>
+                <p class="text-xl text-amber-700 mb-2">Choose Your Digital Self Experience</p>
+                <p class="text-lg text-amber-600">Nosce te ipsum per verba tua</p>
+            </div>
+
+            <!-- Pricing Cards -->
+            <div class="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
+                <!-- Free Tier -->
+                <div class="pricing-card relative p-8" id="free-card">
+                    <div class="text-center mb-6">
+                        <h3 class="text-2xl font-bold text-amber-800 mb-2">Demo Access</h3>
+                        <div class="text-4xl font-bold text-amber-700 mb-2">Free</div>
+                        <p class="text-amber-600">Try before you commit</p>
+                    </div>
+
+                    <ul class="feature-list mb-8">
+                        <li>Limited context from your recent posts</li>
+                        <li>Basic MCP integration</li>
+                        <li>Try with popular AI tools</li>
+                        <li>Get a taste of your digital self</li>
+                    </ul>
+
+                    <button class="papyrus-button disabled" id="free-button" disabled>
+                        Current Plan
+                    </button>
+                </div>
+
+                <!-- Premium Tier -->
+                <div class="pricing-card premium relative p-8" id="premium-card">
+                    <div class="premium-badge">Most Popular</div>
+
+                    <div class="text-center mb-6">
+                        <h3 class="text-2xl font-bold text-amber-800 mb-2">Full History</h3>
+                        <div class="text-4xl font-bold text-amber-700 mb-2">$129</div>
+                        <p class="text-amber-600">Complete digital representation</p>
+                    </div>
+
+                    <ul class="feature-list mb-8">
+                        <li>All your X history and comments</li>
+                        <li>Complete conversation threads</li>
+                        <li>Daily automatic updates</li>
+                        <li>Full MCP integration</li>
+                        <li>Advanced search capabilities</li>
+                        <li>Priority processing</li>
+                        <li>Lifetime access to your data</li>
+                    </ul>
+
+                    <a href="https://buy.stripe.com/3cI28q0Zm7p79Pt1DjeNh43" class="papyrus-button" id="premium-button"
+                        target="_blank">
+                        Upgrade Now
+                    </a>
+                </div>
+            </div>
+
+            <!-- FAQ Section -->
+            <div class="max-w-4xl mx-auto mb-8">
+                <h2 class="text-2xl font-bold text-amber-800 text-center mb-8">Frequently Asked Questions</h2>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="pricing-card p-6">
+                        <h4 class="font-bold text-amber-800 mb-3">What's included in the free tier?</h4>
+                        <p class="text-amber-700">The free tier gives you access to a limited subset of your recent
+                            posts, allowing you to test our MCP integration with your favorite AI tools.</p>
+                    </div>
+
+                    <div class="pricing-card p-6">
+                        <h4 class="font-bold text-amber-800 mb-3">How much history do I get with Premium?</h4>
+                        <p class="text-amber-700">Premium includes your complete X history - all posts, replies, and
+                            conversation threads, with daily updates to keep everything current.</p>
+                    </div>
+
+                    <div class="pricing-card p-6">
+                        <h4 class="font-bold text-amber-800 mb-3">Can I cancel anytime?</h4>
+                        <p class="text-amber-700">Premium is a one-time purchase, not a subscription. You get lifetime
+                            access to your processed data with daily updates included.</p>
+                    </div>
+
+                    <div class="pricing-card p-6">
+                        <h4 class="font-bold text-amber-800 mb-3">Which AI tools work with this?</h4>
+                        <p class="text-amber-700">Our MCP integration works with Cursor, VS Code, Claude, Windsurf, and
+                            other tools that support the Model Context Protocol.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Back to Dashboard -->
+            <div class="text-center">
+                <a href="/dashboard"
+                    class="inline-block bg-amber-200 hover:bg-amber-300 px-6 py-3 rounded-lg text-amber-800 font-semibold transition-all">
+                    ← Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Get user data from window.data injected by the server
+        const userData = window.data || {};
+
+        // Update UI based on user's premium status
+        function updatePricingUI() {
+            const freeCard = document.getElementById('free-card');
+            const premiumCard = document.getElementById('premium-card');
+            const freeButton = document.getElementById('free-button');
+            const premiumButton = document.getElementById('premium-button');
+
+            if (userData.isPremium) {
+                // User has premium
+                premiumCard.classList.add('current-plan');
+                premiumButton.textContent = 'Current Plan';
+                premiumButton.classList.add('current', 'disabled');
+                premiumButton.removeAttribute('href');
+                premiumButton.style.cursor = 'default';
+
+                // Add current plan badge to premium
+                const currentBadge = document.createElement('div');
+                currentBadge.className = 'current-plan-badge';
+                currentBadge.textContent = 'Current Plan';
+                premiumCard.appendChild(currentBadge);
+
+                // Update free button
+                freeButton.textContent = 'Downgrade to Free';
+                freeButton.classList.remove('disabled');
+                freeButton.disabled = false;
+                freeButton.style.cursor = 'pointer';
+            } else {
+                // User is on free tier
+                freeCard.classList.add('current-plan');
+                freeButton.textContent = 'Current Plan';
+                freeButton.classList.add('current');
+
+                // Add current plan badge to free
+                const currentBadge = document.createElement('div');
+                currentBadge.className = 'current-plan-badge';
+                currentBadge.textContent = 'Current Plan';
+                freeCard.appendChild(currentBadge);
+            }
+        }
+
+        // Initialize the UI when page loads
+        document.addEventListener('DOMContentLoaded', updatePricingUI);
+    </script>
+</body>
+
+</html>

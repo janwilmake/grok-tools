@@ -6,6 +6,8 @@ import { UserContext, withSimplerAuth } from "simplerauth-client";
 import { Queryable, studioMiddleware } from "queryable-object";
 //@ts-ignore
 import loginPage from "./login-template.html";
+//@ts-ignore
+import pricingTemplate from "./pricing-template.html";
 
 const DO_NAME_PREFIX = "v4:";
 
@@ -1002,6 +1004,46 @@ export default {
         } catch (error) {
           console.error("Dashboard error:", error);
           return new Response("Error loading dashboard", { status: 500 });
+        }
+      }
+
+      // Handle pricing page
+      if (url.pathname === "/pricing") {
+        if (!ctx.authenticated) {
+          return Response.redirect(url.origin + "/login", 302);
+        }
+
+        try {
+          // Get user's Durable Object
+          const userDO = env.USER_DO.get(
+            env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.id)
+          );
+
+          // Get user stats to check premium status
+          const stats = await userDO.getUserStats(ctx.user);
+
+          // Read the pricing template
+
+          // Inject user data into the template
+          const pricingPageWithData = pricingTemplate.replace(
+            "</body>",
+            `<script>
+        window.data = {
+          isPremium: ${stats.isPremium},
+          balance: ${stats.balance},
+          postCount: ${stats.postCount},
+          scrapeStatus: "${stats.scrapeStatus}"
+        };
+      </script>
+      </body>`
+          );
+
+          return new Response(pricingPageWithData, {
+            headers: { "Content-Type": "text/html" },
+          });
+        } catch (error) {
+          console.error("Pricing page error:", error);
+          return new Response("Error loading pricing page", { status: 500 });
         }
       }
 
