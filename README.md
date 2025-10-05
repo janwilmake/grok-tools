@@ -11,7 +11,7 @@ Utilities
 - [xymake.abc](xymake.abc/) - double struck API
 - [profile](profile) - api to easily get an x profile
 
-`Other
+Other
 
 - [www](www) - landing page https://grok-tools.com
 - [ideas](ideas) - experiments & ideas
