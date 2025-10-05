@@ -1,0 +1,412 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "TwitterAPI.io Advanced Search API",
+    "description": "Advanced search functionality for Twitter tweets with comprehensive filtering options.",
+    "license": {
+      "name": "MIT"
+    },
+    "version": "1.0.0"
+  },
+  "servers": [{ "url": "https://api.twitterapi.io" }],
+  "security": [{ "ApiKeyAuth": [] }],
+  "paths": {
+    "/twitter/tweet/advanced_search": {
+      "get": {
+        "operationId": "searchTweetsAdvanced",
+        "summary": "Advanced Tweet Search",
+        "description": "Search for tweets using advanced query operators and filters. Each page returns approximately 20 tweets. Use cursor for pagination.\n\n## Available Search Operators\n\n### Basic Operators\n- `watching now` - containing both \"watching\" and \"now\" (default AND operator)\n- `\"happy hour\"` - containing the exact phrase \"happy hour\"\n- `love OR hate` - containing either \"love\" or \"hate\" (or both)\n- `beer -root` - containing \"beer\" but not \"root\"\n\n### Hashtags and Mentions\n- `#haiku` - containing the hashtag \"haiku\"\n- `@NASA` - mentioning Twitter account \"NASA\"\n\n### User-specific Searches\n- `from:interior` - sent from Twitter account \"interior\"\n- `to:NASA` - a Tweet authored in reply to Twitter account \"NASA\"\n- `list:NASA/astronauts-in-space-now` - sent from accounts in the specified Twitter list\n\n### Media Filters\n- `puppy filter:media` - containing \"puppy\" and an image or video\n- `puppy filter:native_video` - containing \"puppy\" and an uploaded video, Amplify video, Periscope, or Vine\n- `puppy filter:periscope` - containing \"puppy\" and a Periscope video URL\n- `puppy filter:vine` - containing \"puppy\" and a Vine\n- `puppy filter:images` - containing \"puppy\" and links identified as photos, including third parties\n- `puppy filter:twimg` - containing \"puppy\" and a pic.twitter.com link\n- `puppy -filter:retweets` - containing \"puppy\", filtering out retweets\n\n### Link Filters\n- `hilarious filter:links` - containing \"hilarious\" and linking to URL\n- `puppy url:amazon` - containing \"puppy\" and a URL with \"amazon\" anywhere within it\n\n### Date Filters\n- `superhero since:2015-12-21` - containing \"superhero\" and sent since date \"2015-12-21\" (year-month-day format)\n- `puppy until:2015-12-21` - containing \"puppy\" and sent before date \"2015-12-21\"\n\n### Sentiment Filters\n- `movie -scary :)` - containing \"movie\", not \"scary\", with positive attitude\n- `flight :(` - containing \"flight\" with negative attitude\n- `traffic ?` - containing \"traffic\" and asking a question\n\n## Query Examples\n- `\"AI\" OR \"Twitter\" from:elonmusk since:2021-12-31`\n- `#bitcoin filter:media -filter:retweets`\n- `\"climate change\" lang:en filter:links`\n- `from:NASA filter:images :)`\n\n**Note:** Make sure to URL encode queries. Space characters can be represented by \"%20\" or \"+\".",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "description": "The search query using Twitter's advanced search operators. See operation description for comprehensive list of available operators and examples.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            },
+            "example": "\"AI\" OR \"Twitter\" from:elonmusk since:2021-12-31_23:59:59_UTC"
+          },
+          {
+            "name": "queryType",
+            "in": "query",
+            "description": "The type of results to return: 'Latest' for most recent tweets, 'Top' for most popular/relevant tweets.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["Latest", "Top"],
+              "default": "Latest"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Pagination cursor for retrieving subsequent pages of results. Use empty string \"\" for the first page, then use the 'next_cursor' value from previous responses.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved tweets matching the search criteria",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tweets": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tweet"
+                      },
+                      "description": "Array of tweets matching the search criteria"
+                    },
+                    "has_next_page": {
+                      "type": "boolean",
+                      "description": "Indicates if there are more results available for pagination"
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor value to use for fetching the next page of results. Will be empty if has_next_page is false."
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request",
+                      "enum": ["success", "error"]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Additional information about the request result"
+                    }
+                  },
+                  "required": ["tweets", "has_next_page", "next_cursor"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - invalid query parameters or malformed search query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - invalid or missing API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "tags": ["Search"],
+        "x-code-samples": [
+          {
+            "lang": "curl",
+            "source": "curl -X GET \"https://api.twitterapi.io/twitter/tweet/advanced_search?query=%22AI%22%20OR%20%22Twitter%22%20from%3Aelonmusk&queryType=Latest\" \\\n  -H \"X-API-Key: YOUR_API_KEY\""
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Tweet": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["tweet"],
+            "description": "Object type identifier"
+          },
+          "id": {
+            "type": "string",
+            "description": "Unique identifier of the tweet"
+          },
+          "url": {
+            "type": "string",
+            "description": "Direct URL to the tweet on Twitter/X"
+          },
+          "text": {
+            "type": "string",
+            "description": "Full text content of the tweet"
+          },
+          "source": {
+            "type": "string",
+            "description": "Platform/app used to post the tweet (e.g., 'Twitter for iPhone')"
+          },
+          "retweetCount": {
+            "type": "integer",
+            "description": "Number of times this tweet has been retweeted"
+          },
+          "replyCount": {
+            "type": "integer",
+            "description": "Number of replies to this tweet"
+          },
+          "likeCount": {
+            "type": "integer",
+            "description": "Number of likes this tweet has received"
+          },
+          "quoteCount": {
+            "type": "integer",
+            "description": "Number of times this tweet has been quote tweeted"
+          },
+          "viewCount": {
+            "type": "integer",
+            "description": "Number of times this tweet has been viewed"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Date and time when the tweet was created (e.g., 'Tue Dec 10 07:00:30 +0000 2024')"
+          },
+          "lang": {
+            "type": "string",
+            "description": "Detected language of the tweet content (e.g., 'en'). May be empty."
+          },
+          "bookmarkCount": {
+            "type": "integer",
+            "description": "Number of times this tweet has been bookmarked"
+          },
+          "isReply": {
+            "type": "boolean",
+            "description": "Whether this tweet is a reply to another tweet"
+          },
+          "inReplyToId": {
+            "type": "string",
+            "description": "ID of the tweet being replied to. May be empty."
+          },
+          "conversationId": {
+            "type": "string",
+            "description": "ID of the conversation thread this tweet belongs to. May be empty."
+          },
+          "inReplyToUserId": {
+            "type": "string",
+            "description": "User ID of the account being replied to. May be empty."
+          },
+          "inReplyToUsername": {
+            "type": "string",
+            "description": "Username of the account being replied to. May be empty."
+          },
+          "author": {
+            "$ref": "#/components/schemas/UserInfo",
+            "description": "Information about the user who posted this tweet"
+          },
+          "entities": {
+            "$ref": "#/components/schemas/TweetEntities",
+            "description": "Structured data about hashtags, URLs, mentions, etc. found in the tweet"
+          },
+          "quoted_tweet": {
+            "$ref": "#/components/schemas/Tweet",
+            "description": "The tweet being quoted, if this is a quote tweet. May be null."
+          },
+          "retweeted_tweet": {
+            "$ref": "#/components/schemas/Tweet",
+            "description": "The original tweet being retweeted, if this is a retweet. May be null."
+          }
+        },
+        "required": ["type", "id", "url", "text", "author"]
+      },
+      "TweetEntities": {
+        "type": "object",
+        "properties": {
+          "hashtags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "indices": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "description": "Start and end positions of the hashtag in the tweet text"
+                },
+                "text": {
+                  "type": "string",
+                  "description": "The hashtag text (without the # symbol)"
+                }
+              }
+            },
+            "description": "Hashtags found in the tweet"
+          },
+          "urls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "display_url": {
+                  "type": "string",
+                  "description": "URL as displayed in the tweet"
+                },
+                "expanded_url": {
+                  "type": "string",
+                  "description": "Full, expanded URL"
+                },
+                "indices": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "description": "Start and end positions of the URL in the tweet text"
+                },
+                "url": {
+                  "type": "string",
+                  "description": "Shortened URL as it appears in the tweet"
+                }
+              }
+            },
+            "description": "URLs found in the tweet"
+          },
+          "user_mentions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id_str": {
+                  "type": "string",
+                  "description": "User ID of the mentioned account"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Display name of the mentioned user"
+                },
+                "screen_name": {
+                  "type": "string",
+                  "description": "Username of the mentioned account (without @ symbol)"
+                },
+                "indices": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "description": "Start and end positions of the mention in the tweet text"
+                }
+              }
+            },
+            "description": "User mentions found in the tweet"
+          }
+        }
+      },
+      "UserInfo": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["user"]
+          },
+          "userName": {
+            "type": "string",
+            "description": "The username/handle of the Twitter user"
+          },
+          "url": {
+            "type": "string",
+            "description": "The x.com URL of the user's profile"
+          },
+          "id": {
+            "type": "string",
+            "description": "Unique identifier of the user"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the user"
+          },
+          "isBlueVerified": {
+            "type": "boolean",
+            "description": "Whether the user has Twitter Blue verification"
+          },
+          "verifiedType": {
+            "type": "string",
+            "description": "Type of verification (e.g., 'government'). May be empty."
+          },
+          "profilePicture": {
+            "type": "string",
+            "description": "URL of the user's profile picture"
+          },
+          "coverPicture": {
+            "type": "string",
+            "description": "URL of the user's cover/header image"
+          },
+          "description": {
+            "type": "string",
+            "description": "User's profile bio/description"
+          },
+          "location": {
+            "type": "string",
+            "description": "User's location as specified in their profile. May be empty."
+          },
+          "followers": {
+            "type": "integer",
+            "description": "Number of followers this user has"
+          },
+          "following": {
+            "type": "integer",
+            "description": "Number of accounts this user is following"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When this account was created (e.g., 'Thu Dec 13 08:41:26 +0000 2007')"
+          },
+          "statusesCount": {
+            "type": "integer",
+            "description": "Total number of tweets posted by this user"
+          }
+        },
+        "required": ["type", "userName", "id", "name"]
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "integer",
+            "format": "int32",
+            "description": "HTTP status code"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          },
+          "status": {
+            "type": "string",
+            "description": "Request status",
+            "enum": ["error"]
+          }
+        },
+        "required": ["error", "message"]
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key for authentication. Get your API key from TwitterAPI.io dashboard."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Search",
+      "description": "Advanced search operations for finding tweets with complex filtering criteria"
+    }
+  ]
+}

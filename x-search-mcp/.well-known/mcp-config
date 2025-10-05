@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://twitterapi.wilmake.com/.well-known/mcp-config",
+  "title": "TwitterAPI Configuration",
+  "description": "Configuration for connecting to this MCP server",
+  "x-query-style": "dot+bracket",
+  "type": "object",
+  "properties": {
+    "apiKey": {
+      "type": "string",
+      "title": "API Key",
+      "description": "Your twitterapi.io API key for authentication. Get it at https://twitterapi.io/dashboard"
+    }
+  },
+  "required": [
+    "apiKey"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,11 @@
+name = "xfollows-markdownfeed"
+main = "worker.js"
+compatibility_date = "2025-07-01"
+
+route.custom_domain = true
+route.pattern = "xfollows.markdownfeed.com"
+
+[[kv_namespaces]]
+binding = "KV_NAMESPACE"
+id = "17806deb375e42a1ac5139f2fa24acbe"
+

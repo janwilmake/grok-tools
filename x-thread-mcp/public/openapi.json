@@ -1,0 +1,1417 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "X Threads API",
+    "description": "API for retrieving and interacting with Twitter/X posts, conversations, and user data",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://xymake.com",
+      "description": "Production server"
+    }
+  ],
+  "paths": {
+    "/users/details.json": {
+      "get": {
+        "summary": "Get user details",
+        "description": "Returns a list of user profiles with their details",
+        "operationId": "getUserDetails",
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "integer",
+                        "example": 223338653
+                      },
+                      "id_str": {
+                        "type": "string",
+                        "example": "223338653"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "screen_name": {
+                        "type": "string"
+                      },
+                      "location": {
+                        "type": "string",
+                        "example": "Oakland, CA"
+                      },
+                      "url": {
+                        "type": ["string", "null"],
+                        "example": null
+                      },
+                      "description": {
+                        "type": "string",
+                        "example": "Cloud Infra Engineer, GCP Enthusiast"
+                      },
+                      "protected": {
+                        "type": "boolean",
+                        "example": false
+                      },
+                      "verified": {
+                        "type": "boolean",
+                        "example": true
+                      },
+                      "followers_count": {
+                        "type": "integer",
+                        "example": 1449
+                      },
+                      "friends_count": {
+                        "type": "integer",
+                        "example": 4710
+                      },
+                      "listed_count": {
+                        "type": "integer",
+                        "example": 11
+                      },
+                      "favourites_count": {
+                        "type": "integer",
+                        "example": 10383
+                      },
+                      "statuses_count": {
+                        "type": "integer",
+                        "example": 1984
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "example": "2010-12-06T03:04:47.000000Z"
+                      },
+                      "profile_banner_url": {
+                        "type": ["string", "null"],
+                        "example": "https://pbs.twimg.com/profile_banners/223338653/1396987604"
+                      },
+                      "profile_image_url_https": {
+                        "type": "string",
+                        "example": "https://pbs.twimg.com/profile_images/1752999989343825920/qPC5NrE9_normal.jpg"
+                      },
+                      "can_dm": {
+                        "type": "boolean",
+                        "example": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User details not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+
+    "/users.json": {
+      "get": {
+        "summary": "Get list of users",
+        "description": "Returns a list of all users in JSON format",
+        "operationId": "getUsersJson",
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved users list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "example": ["user1", "user2", "user3"]
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users.md": {
+      "get": {
+        "summary": "Get list of users in Markdown format",
+        "description": "Returns a list of all users in Markdown format",
+        "operationId": "getUsersMd",
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved users list",
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "@user1, @user2, @user3"
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{username}": {
+      "get": {
+        "summary": "Get user profile",
+        "description": "Retrieves information about a user's profile",
+        "operationId": "getUserProfile",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The Twitter/X username (without @)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved user profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User profile is private or not available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{username}/status/{tweetId}": {
+      "get": {
+        "summary": "Get a tweet and its conversation",
+        "description": "Retrieves a tweet by ID along with its parent tweets and comments, sorted chronologically",
+        "operationId": "getTweetConversation",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The Twitter/X username (without @)"
+          },
+          {
+            "name": "tweetId",
+            "in": "path",
+            "description": "The numeric ID of the tweet to retrieve the thread for",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved the tweet conversation",
+            "headers": {
+              "X-Cache": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["HIT", "MISS"]
+                },
+                "description": "Indicates if the response was served from cache"
+              }
+            },
+            "content": {
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "@username - 2023-05-20T15:30:00Z: This is the text of the tweet\n(500 likes, 100 retweets)\n\n@commenter - 2023-05-20T15:35:00Z: This is a reply to the tweet"
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid tweet ID format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{username}/status/{tweetId}.json": {
+      "get": {
+        "summary": "Get a tweet and its conversation in JSON format",
+        "description": "Retrieves a tweet by ID along with its parent tweets and comments in JSON format, sorted chronologically",
+        "operationId": "getTweetConversationJson",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The Twitter/X username (without @)"
+          },
+          {
+            "name": "tweetId",
+            "in": "path",
+            "description": "The numeric ID of the tweet to retrieve the thread for",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved the tweet conversation",
+            "headers": {
+              "X-Cache": {
+                "schema": {
+                  "type": "string",
+                  "enum": ["HIT", "MISS"]
+                },
+                "description": "Indicates if the response was served from cache"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tweet"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid tweet ID format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{username}/with_replies": {
+      "get": {
+        "summary": "Get user posts with replies",
+        "description": "Retrieves a user's posts including their replies",
+        "operationId": "getUserPostsWithReplies",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The Twitter/X username (without @)"
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "Start date for the posts (format: YYYY-MM-DD)"
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            },
+            "description": "End date for the posts (format: YYYY-MM-DD)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved user posts with replies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "username": {
+                      "type": "string"
+                    },
+                    "dateResults": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/DateResult"
+                      }
+                    },
+                    "start": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "end": {
+                      "type": "string",
+                      "format": "date"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid date format or date range",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User profile is private or not available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{username}/highlights": {
+      "get": {
+        "summary": "Get user highlights",
+        "description": "Retrieves highlighted content from a user's profile",
+        "operationId": "getUserHighlights",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The Twitter/X username (without @)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved user highlights",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "urls": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              },
+              "text/yaml": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User profile is private or not available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{username}/lists": {
+      "get": {
+        "summary": "Get user lists",
+        "description": "Retrieves lists created by a user",
+        "operationId": "getUserLists",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The Twitter/X username (without @)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved user lists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "lists": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/TwitterList"
+                      }
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              },
+              "text/yaml": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User profile is private or not available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/i/lists/{listId}": {
+      "get": {
+        "summary": "Get list details",
+        "description": "Retrieves details about a specific list and its members",
+        "operationId": "getListDetails",
+        "parameters": [
+          {
+            "name": "listId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The ID of the list"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved list details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "details": {
+                      "$ref": "#/components/schemas/TwitterList"
+                    },
+                    "memberCount": {
+                      "type": "integer"
+                    },
+                    "members": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              },
+              "text/yaml": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid list ID format",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "List not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/{username}/{action}/{tweetId}/{text}": {
+      "get": {
+        "summary": "Create a new tweet, reply, or quote",
+        "description": "Creates a new tweet, reply to an existing tweet, or quote tweet based on the action parameter",
+        "operationId": "createTweetThread",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The login identifier"
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["reply", "quote", "new"]
+            },
+            "description": "The action to perform: reply to a tweet, quote a tweet, or create a new tweet"
+          },
+          {
+            "name": "tweetId",
+            "in": "path",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{18,19}$"
+            },
+            "description": "The numeric ID of the tweet to reply to or quote (required for reply and quote actions)"
+          },
+          {
+            "name": "text",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "The text content of the tweet"
+          },
+          {
+            "name": "apiKey",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "API key for authentication if not provided via cookie"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully created the tweet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "tweet_id": {
+                      "type": "string",
+                      "description": "ID of the created tweet"
+                    },
+                    "text": {
+                      "type": "string",
+                      "description": "Text content of the tweet"
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": ["reply", "quote", "new"]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid tweet ID format or missing required parameters",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Unauthorized - missing or invalid access token",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "details": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Server error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookieAuth": []
+          },
+          {
+            "apiKey": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Tweet": {
+        "type": "object",
+        "required": [
+          "id_str",
+          "full_text",
+          "tweet_created_at",
+          "source",
+          "truncated",
+          "user",
+          "lang",
+          "is_quote_status",
+          "is_pinned",
+          "quote_count",
+          "reply_count",
+          "retweet_count",
+          "favorite_count",
+          "views_count",
+          "bookmark_count",
+          "entities"
+        ],
+        "properties": {
+          "id_str": {
+            "type": "string",
+            "description": "String representation of the tweet ID"
+          },
+          "full_text": {
+            "type": "string",
+            "description": "Full text content of the tweet"
+          },
+          "tweet_created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation date and time of the tweet"
+          },
+          "source": {
+            "type": "string",
+            "description": "Source of the tweet (e.g., 'Twitter for iPhone')"
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "Whether the tweet is truncated"
+          },
+          "in_reply_to_status_id_str": {
+            "type": ["string", "null"],
+            "description": "ID of the tweet this is a reply to, if applicable"
+          },
+          "in_reply_to_user_id_str": {
+            "type": ["string", "null"],
+            "description": "ID of the user this tweet is a reply to, if applicable"
+          },
+          "in_reply_to_screen_name": {
+            "type": ["string", "null"],
+            "description": "Screen name of the user this tweet is a reply to, if applicable"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "lang": {
+            "type": "string",
+            "description": "Language code of the tweet"
+          },
+          "quoted_status_id_str": {
+            "type": ["string", "null"],
+            "description": "ID of the quoted tweet, if applicable"
+          },
+          "is_quote_status": {
+            "type": "boolean",
+            "description": "Whether this tweet quotes another tweet"
+          },
+          "is_pinned": {
+            "type": "boolean",
+            "description": "Whether this tweet is pinned to the user's profile"
+          },
+          "quote_count": {
+            "type": "integer",
+            "description": "Number of quote tweets"
+          },
+          "reply_count": {
+            "type": "integer",
+            "description": "Number of replies"
+          },
+          "retweet_count": {
+            "type": "integer",
+            "description": "Number of retweets"
+          },
+          "favorite_count": {
+            "type": "integer",
+            "description": "Number of likes"
+          },
+          "views_count": {
+            "type": "integer",
+            "description": "Number of views"
+          },
+          "bookmark_count": {
+            "type": "integer",
+            "description": "Number of bookmarks"
+          },
+          "quoted_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tweet"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The quoted tweet object, if applicable"
+          },
+          "retweeted_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Tweet"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The retweeted tweet object, if applicable"
+          },
+          "entities": {
+            "$ref": "#/components/schemas/TweetEntities"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "required": [
+          "id_str",
+          "name",
+          "screen_name",
+          "location",
+          "description",
+          "protected",
+          "verified",
+          "followers_count",
+          "friends_count",
+          "listed_count",
+          "favourites_count",
+          "statuses_count",
+          "created_at",
+          "profile_banner_url",
+          "profile_image_url_https"
+        ],
+        "properties": {
+          "id_str": {
+            "type": "string",
+            "description": "String representation of the user ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the user"
+          },
+          "screen_name": {
+            "type": "string",
+            "description": "Username of the user (without @)"
+          },
+          "location": {
+            "type": "string",
+            "description": "User-defined location"
+          },
+          "description": {
+            "type": "string",
+            "description": "User bio"
+          },
+          "url": {
+            "type": ["string", "null"],
+            "description": "URL provided by the user in their profile"
+          },
+          "protected": {
+            "type": "boolean",
+            "description": "Whether the user's tweets are protected"
+          },
+          "verified": {
+            "type": "boolean",
+            "description": "Whether the user is verified"
+          },
+          "followers_count": {
+            "type": "integer",
+            "description": "Number of followers"
+          },
+          "friends_count": {
+            "type": "integer",
+            "description": "Number of accounts the user is following"
+          },
+          "listed_count": {
+            "type": "integer",
+            "description": "Number of lists the user is on"
+          },
+          "favourites_count": {
+            "type": "integer",
+            "description": "Number of tweets the user has liked"
+          },
+          "statuses_count": {
+            "type": "integer",
+            "description": "Number of tweets the user has posted"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation date and time of the user account"
+          },
+          "profile_banner_url": {
+            "type": "string",
+            "description": "URL of the user's profile banner"
+          },
+          "profile_image_url_https": {
+            "type": "string",
+            "description": "HTTPS URL of the user's profile image"
+          },
+          "can_dm": {
+            "type": ["boolean", "null"],
+            "description": "Whether the authenticated user can send direct messages to this user"
+          }
+        }
+      },
+      "TweetEntities": {
+        "type": "object",
+        "required": ["urls", "user_mentions", "hashtags", "symbols"],
+        "properties": {
+          "urls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UrlEntity"
+            },
+            "description": "URLs mentioned in the tweet"
+          },
+          "user_mentions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserMentionEntity"
+            },
+            "description": "Users mentioned in the tweet"
+          },
+          "hashtags": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HashtagEntity"
+            },
+            "description": "Hashtags in the tweet"
+          },
+          "symbols": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SymbolEntity"
+            },
+            "description": "Symbols (like cashtags) in the tweet"
+          },
+          "media": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaEntity"
+            },
+            "description": "Media attached to the tweet"
+          },
+          "poll": {
+            "$ref": "#/components/schemas/PollEntity"
+          }
+        }
+      },
+      "UrlEntity": {
+        "type": "object",
+        "required": ["url", "expanded_url", "display_url", "indices"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Shortened URL"
+          },
+          "expanded_url": {
+            "type": "string",
+            "description": "Expanded URL"
+          },
+          "display_url": {
+            "type": "string",
+            "description": "URL as displayed in the tweet"
+          },
+          "indices": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Start and end indices of the URL in the tweet text"
+          }
+        }
+      },
+      "UserMentionEntity": {
+        "type": "object",
+        "required": ["id_str", "name", "screen_name", "indices"],
+        "properties": {
+          "id_str": {
+            "type": "string",
+            "description": "String representation of the mentioned user's ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name of the mentioned user"
+          },
+          "screen_name": {
+            "type": "string",
+            "description": "Username of the mentioned user (without @)"
+          },
+          "indices": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Start and end indices of the mention in the tweet text"
+          }
+        }
+      },
+      "HashtagEntity": {
+        "type": "object",
+        "required": ["text", "indices"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text of the hashtag (without #)"
+          },
+          "indices": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Start and end indices of the hashtag in the tweet text"
+          }
+        }
+      },
+      "SymbolEntity": {
+        "type": "object",
+        "required": ["text", "indices"],
+        "properties": {
+          "text": {
+            "type": "string",
+            "description": "Text of the symbol (without $)"
+          },
+          "indices": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Start and end indices of the symbol in the tweet text"
+          }
+        }
+      },
+      "MediaEntity": {
+        "type": "object",
+        "required": [
+          "id_str",
+          "media_url_https",
+          "url",
+          "display_url",
+          "expanded_url",
+          "type",
+          "indices"
+        ],
+        "properties": {
+          "id_str": {
+            "type": "string",
+            "description": "String representation of the media ID"
+          },
+          "media_url_https": {
+            "type": "string",
+            "description": "HTTPS URL pointing to the media file"
+          },
+          "url": {
+            "type": "string",
+            "description": "Shortened URL for the media"
+          },
+          "display_url": {
+            "type": "string",
+            "description": "URL as displayed in the tweet"
+          },
+          "expanded_url": {
+            "type": "string",
+            "description": "Expanded URL for the media"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["photo", "video", "animated_gif"],
+            "description": "Type of media"
+          },
+          "indices": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "description": "Start and end indices of the media URL in the tweet text"
+          }
+        }
+      },
+      "PollEntity": {
+        "type": "object",
+        "required": [
+          "end_datetime",
+          "duration_minutes",
+          "counts_are_final",
+          "choices"
+        ],
+        "properties": {
+          "end_datetime": {
+            "type": "string",
+            "format": "date-time",
+            "description": "End date and time of the poll"
+          },
+          "duration_minutes": {
+            "type": "integer",
+            "description": "Duration of the poll in minutes"
+          },
+          "counts_are_final": {
+            "type": "boolean",
+            "description": "Whether the counts are final"
+          },
+          "choices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PollChoice"
+            },
+            "description": "Choices in the poll"
+          }
+        }
+      },
+      "PollChoice": {
+        "type": "object",
+        "required": ["label", "count"],
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Text of the poll choice"
+          },
+          "count": {
+            "type": "integer",
+            "description": "Number of votes for this choice"
+          }
+        }
+      },
+      "TwitterList": {
+        "type": "object",
+        "required": [
+          "id_str",
+          "name",
+          "description",
+          "member_count",
+          "subscriber_count",
+          "mode",
+          "created_at",
+          "uri",
+          "user"
+        ],
+        "properties": {
+          "id_str": {
+            "type": "string",
+            "description": "String representation of the list ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the list"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of the list"
+          },
+          "member_count": {
+            "type": "integer",
+            "description": "Number of members in the list"
+          },
+          "subscriber_count": {
+            "type": "integer",
+            "description": "Number of subscribers to the list"
+          },
+          "mode": {
+            "type": "string",
+            "description": "Privacy setting of the list (Public or Private)"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation date and time of the list"
+          },
+          "uri": {
+            "type": "string",
+            "description": "URI for the list"
+          },
+          "user": {
+            "type": "object",
+            "properties": {
+              "id_str": {
+                "type": "string",
+                "description": "String representation of the user ID"
+              },
+              "name": {
+                "type": "string",
+                "description": "Display name of the user"
+              },
+              "screen_name": {
+                "type": "string",
+                "description": "Username of the user (without @)"
+              }
+            }
+          }
+        }
+      },
+      "DateResult": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Username the posts belong to"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of the posts (YYYY-MM-DD)"
+          },
+          "post_count": {
+            "type": "integer",
+            "description": "Number of posts on this date"
+          },
+          "statusIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of status IDs for posts on this date"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["status", "message"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["error"],
+            "description": "Status of the response"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "x_access_token"
+      },
+      "apiKey": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "apiKey"
+      }
+    }
+  }
+}

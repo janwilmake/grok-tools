@@ -1,0 +1,9 @@
+{
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20250919.0"
+  },
+  "dependencies": {
+    "simplerauth-client": "0.0.18",
+    "with-mcp": "0.0.17"
+  }
+}

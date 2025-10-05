@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "with-xmoney": "^0.0.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250711.0"
+  }
+}

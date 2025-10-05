@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-black">
+
+<head>
+    <!--based on pricing-old.html (claude):
+    
+    
+    
+    I want to revamp my pricing page fully. 
+Instead of this, focus on the paid plan only, leaving out the 2 others
+Title: "An LLM-ready Context of your X, updated daily"
+header: Calculate your suggested deposit
+To get to the cost estimation there should be sliders:
+slider 1: follower count
+slider 2: total posts
+slider 3: posts per day
+based off follower count, calculate estimated comments per post
+total post * (comments per post + 1) = history
+posts per day * (comments per post + 1) * 30 = new per month
+charge a fixed price of $1 per thousand and give the user an initial price (to build the archive) and an estimated cost per month afterwards
+Suggested deposit (enough for 12 months) = (fixed price + monthly price * 12) + 20% margin = xxx
+The CTA leads to https://github.com/sponsors/janwilmake 
+Also there should be a button have any questions? feel free to reach out on https://x.com/janwilmake 
+Give me a full new html focused on that. 
+make sure the sliders are logarithmic in scale
+make sure the whole calculator is viewable, including the suggested deposit, in a single screen. mobile friendly. ensure the total price is always visible (sticky on bottom)
+ -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XYMake Pricing - LLM-ready Context for your X</title>
+    <meta name="description"
+        content="Get your X content LLM-ready with daily updates. Calculate your suggested deposit based on your X metrics." />
+
+    <meta name="robots" content="index, follow" />
+
+    <!-- Facebook Meta Tags -->
+    <meta property="og:url" content="https://xymake.com" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Turn Your X into LLM-Ready Data" />
+    <meta property="og:description"
+        content="Unlock your X value by letting your MCP agents and other APIs access all your X posts." />
+    <meta property="og:image" content="https://quickog.com/screenshot/xymake.com/pricing" />
+    <meta property="og:image:alt"
+        content="Unlock your X value by letting your MCP agents and other APIs access all your X posts." />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- Twitter Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta property="twitter:domain" content="xymake.com" />
+    <meta property="twitter:url" content="https://xymake.com" />
+    <meta name="twitter:title" content="Turn Your X into LLM-Ready Data" />
+    <meta name="twitter:description"
+        content="Unlock your X value by letting your MCP agents and other APIs access all your X posts." />
+    <meta name="twitter:image" content="https://quickog.com/screenshot/xymake.com/pricing" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+
+        body {
+            font-family: "Inter", sans-serif;
+        }
+
+        .xy-gradient {
+            background: linear-gradient(135deg, #000000 0%, #121212 100%);
+        }
+
+        .xy-border {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .button-glow:hover {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+
+        /* Custom slider styles */
+        .slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #2d3748;
+            outline: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            background: #2563eb;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            transition: background 0.15s ease;
+            border: none;
+        }
+
+        .slider::-moz-range-thumb:hover {
+            background: #2563eb;
+        }
+    </style>
+</head>
+
+<body class="text-white">
+    <main class="min-h-screen xy-gradient pb-24">
+        <div class="max-w-4xl mx-auto px-4 py-8 md:py-12">
+            <!-- Header -->
+            <header class="flex justify-between items-center mb-8">
+                <a href="/" class="flex items-center gap-3">
+                    <svg viewBox="0 0 24 24" class="w-8 h-8" fill="currentColor">
+                        <path
+                            d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                    </svg>
+                    <span class="font-bold text-xl">XYMake</span>
+                </a>
+                <nav>
+                    <ul class="flex gap-6">
+                        <li><a href="/" class="text-gray-400 hover:text-white transition-colors">Home</a></li>
+                        <li><a href="/pricing" class="text-blue-400 font-medium">Pricing</a></li>
+                    </ul>
+                </nav>
+            </header>
+
+            <!-- Hero Section -->
+            <div class="text-center mb-10">
+                <h1 class="text-3xl md:text-4xl font-bold mb-4">An LLM-ready Context of your X, <span
+                        class="text-blue-400">updated daily</span></h1>
+                <p class="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
+                    Your X knowledge preserved and made accessible for AI tools with automatic daily updates.
+                </p>
+            </div>
+
+            <!-- Calculator Section -->
+            <div class="xy-border rounded-xl p-6 md:p-8 bg-white/5 mb-8">
+                <h2 class="text-2xl font-bold mb-6 text-center">Calculate your suggested deposit</h2>
+
+                <div class="space-y-6 mb-6">
+                    <!-- Follower Count Slider -->
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label for="follower-count" class="font-medium">Follower Count</label>
+                            <span id="follower-display" class="text-blue-400 font-semibold">10,000</span>
+                        </div>
+                        <input type="range" id="follower-count" min="1" max="6" step="0.01" value="4"
+                            class="slider w-full">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>100</span>
+                            <span>1M</span>
+                        </div>
+                    </div>
+
+                    <!-- Total Posts Slider -->
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label for="total-posts" class="font-medium">Historic Posts</label>
+                            <span id="posts-display" class="text-blue-400 font-semibold">2,000</span>
+                        </div>
+                        <input type="range" id="total-posts" min="1" max="5" step="0.01" value="2.7"
+                            class="slider w-full">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>100</span>
+                            <span>100K</span>
+                        </div>
+                    </div>
+
+                    <!-- Posts Per Day Slider -->
+                    <div>
+                        <div class="flex justify-between mb-2">
+                            <label for="posts-per-day" class="font-medium">Posts Per Day</label>
+                            <span id="ppd-display" class="text-blue-400 font-semibold">5</span>
+                        </div>
+                        <input type="range" id="posts-per-day" min="0" max="2" step="0.01" value="0.7"
+                            class="slider w-full">
+                        <div class="flex justify-between text-xs text-gray-400 mt-1">
+                            <span>1</span>
+                            <span>10</span>
+                            <span>100</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div class="space-y-4 p-4 bg-white/10 rounded-lg">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-gray-300 mb-1">Estimated comments per post</p>
+                            <p id="comments-per-post" class="text-xl font-semibold">3</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-300 mb-1">Total historical content</p>
+                            <p id="total-historical" class="text-xl font-semibold">20,000 items</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-300 mb-1">New content per month</p>
+                            <p id="monthly-content" class="text-xl font-semibold">600 items</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-300 mb-1">Monthly cost</p>
+                            <p id="monthly-cost" class="text-xl font-semibold">$0.60</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features Section -->
+            <div class="grid md:grid-cols-3 gap-6 mb-10">
+                <div class="xy-border rounded-xl p-6 bg-white/5">
+                    <div class="text-blue-400 mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Daily Updates</h3>
+                    <p class="text-gray-300">Your X content is automatically synced daily, ensuring your knowledge base
+                        stays current.</p>
+                </div>
+                <div class="xy-border rounded-xl p-6 bg-white/5">
+                    <div class="text-blue-400 mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">LLM-Optimized</h3>
+                    <p class="text-gray-300">Content is formatted specifically for language models to maximize the
+                        utility of your knowledge.</p>
+                </div>
+                <div class="xy-border rounded-xl p-6 bg-white/5 mb-20">
+                    <div class="text-blue-400 mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2">Complete Archive</h3>
+                    <p class="text-gray-300">Includes all your posts and associated comments, making your entire X
+                        knowledge accessible.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sticky Bottom Bar with Pricing -->
+        <div class="fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-sm border-t border-white/10 py-4 px-4">
+            <div class="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+
+                <div class="flex flex-row justify-between md:justify-around w-full">
+                    <div>
+                        <p class="text-gray-300 mb-1">Minimal deposit</p>
+                        <p class="text-gray-600 text-xs mb-1">±30 days coverage</p>
+                        <p id="minimal-deposit" class="text-2xl font-bold text-blue-400">$30.00</p>
+                    </div>
+
+                    <div>
+                        <p class="text-gray-300 mb-1">Suggested deposit</p>
+                        <p class="text-gray-600 text-xs mb-1">±12 months coverage</p>
+                        <p id="suggested-deposit" class="text-2xl font-bold text-blue-400">$30.00</p>
+                    </div>
+
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 w-full">
+                    <a href="https://github.com/sponsors/janwilmake" target="_blank"
+                        class="bg-blue-600 hover:bg-blue-700 py-3 px-6 rounded-xl font-semibold text-center transition-colors button-glow">
+                        Make Deposit
+                    </a>
+                    <a href="https://x.com/janwilmake" target="_blank"
+                        class="bg-white/10 hover:bg-white/20 py-3 px-6 rounded-xl font-medium text-center transition-colors flex items-center justify-center gap-2">
+                        <span>Have questions?</span>
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path
+                                d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                        </svg>
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Calculator logic
+        const followerSlider = document.getElementById('follower-count');
+        const postsSlider = document.getElementById('total-posts');
+        const ppdSlider = document.getElementById('posts-per-day');
+
+        const followerDisplay = document.getElementById('follower-display');
+        const postsDisplay = document.getElementById('posts-display');
+        const ppdDisplay = document.getElementById('ppd-display');
+
+        const commentsPerPostEl = document.getElementById('comments-per-post');
+        const totalHistoricalEl = document.getElementById('total-historical');
+        const monthlyContentEl = document.getElementById('monthly-content');
+        const monthlyCostEl = document.getElementById('monthly-cost');
+        const suggestedDepositEl = document.getElementById('suggested-deposit');
+        const minimalDespositEl = document.getElementById('minimal-deposit');
+
+        // Logarithmic scale conversion functions
+        function followerValue() {
+            return Math.round(Math.pow(10, parseFloat(followerSlider.value)));
+        }
+
+        function postsValue() {
+            return Math.round(Math.pow(10, parseFloat(postsSlider.value)));
+        }
+
+        function ppdValue() {
+            return Math.round(Math.pow(10, parseFloat(ppdSlider.value)));
+        }
+
+        // Format numbers with commas
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        // Calculate estimated comments per post based on follower count
+        function estimateCommentsPerPost(followers) {
+            // Simple formula: more followers = more comments (logarithmic scale)
+            return Math.max(1, Math.round(Math.log10(followers) * 1.5));
+        }
+
+        // Update all calculations
+        function updateCalculations() {
+            const followers = followerValue();
+            const totalPosts = postsValue();
+            const postsPerDay = ppdValue();
+
+            // Update displays
+            followerDisplay.textContent = formatNumber(followers);
+            postsDisplay.textContent = formatNumber(totalPosts);
+            ppdDisplay.textContent = postsPerDay;
+
+            // Calculate metrics
+            const commentsPerPost = estimateCommentsPerPost(followers);
+            const totalHistorical = totalPosts * (commentsPerPost + 1);
+            const monthlyNew = postsPerDay * (commentsPerPost + 1) * 30;
+
+            // Calculate costs ($1 per 1000 items)
+            const initialCost = totalHistorical / 1000;
+            const monthlyCost = monthlyNew / 1000;
+            const yearlyDeposit = (initialCost + (monthlyCost * 12)) * 1.2; // Add 20% margin
+            const minimalDesposit = (initialCost + monthlyCost) * 1.2
+            // Update display
+            commentsPerPostEl.textContent = commentsPerPost;
+            totalHistoricalEl.textContent = formatNumber(totalHistorical) + ' items';
+            monthlyContentEl.textContent = formatNumber(monthlyNew) + ' items';
+            monthlyCostEl.textContent = '$' + monthlyCost.toFixed(2);
+            suggestedDepositEl.textContent = '$' + yearlyDeposit.toFixed(2);
+            minimalDespositEl.textContent = '$' + (minimalDesposit).toFixed(2);
+        }
+
+        // Add event listeners
+        followerSlider.addEventListener('input', updateCalculations);
+        postsSlider.addEventListener('input', updateCalculations);
+        ppdSlider.addEventListener('input', updateCalculations);
+
+        // Initial calculation
+        updateCalculations();
+    </script>
+</body>
+
+</html>

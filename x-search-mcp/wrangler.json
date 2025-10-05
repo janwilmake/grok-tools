@@ -1,0 +1,8 @@
+{
+  "$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+  "name": "x-search-mcp",
+  "main": "main.ts",
+  "assets": { "directory": "./" },
+  "compatibility_date": "2025-09-15",
+  "route": { "custom_domain": true, "pattern": "search.grok-tools.com" }
+}

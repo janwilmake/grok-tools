@@ -1,0 +1,24 @@
+{
+  "$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
+  "name": "username-enrichment-worker",
+  "main": "worker.js",
+  "compatibility_date": "2025-07-01",
+  "routes": [
+    {
+      "custom_domain": true,
+      "pattern": "profile.markdownfeed.com"
+    },
+    {
+      "custom_domain": true,
+      "pattern": "profile.grok-tools.com"
+    }
+  ],
+  "dev": { "port": 3000 },
+  "assets": { "directory": "./" },
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "7a5248193f4c4b91bbf194107d0e7625"
+    }
+  ]
+}
