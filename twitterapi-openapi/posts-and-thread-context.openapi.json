@@ -1,0 +1,437 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "TwitterAPI.io - User Posts & Thread Comments",
+    "description": "Subset for getting user posts and thread comments",
+    "version": "1.0.0"
+  },
+  "servers": [{ "url": "https://api.twitterapi.io" }],
+  "security": [{ "ApiKeyAuth": [] }],
+  "paths": {
+    "/twitter/user/last_tweets": {
+      "get": {
+        "description": "Retrieve tweets by user name. Sort by created_at. Results are paginated, with each page returning up to 20 tweets. This API will not return the tweets the user replied to. If you want to get the reply tweets, please use the advanced search API.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "description": "user id of the user. userId is recommended, could be more stable and faster than userName. userId and userName are mutually exclusive. If both are provided, userId will be used.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "userName",
+            "in": "query",
+            "description": "screen name of the user. userId and userName are mutually exclusive. If both are provided, userId will be used.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The cursor to paginate through the results. First page is \"\".",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tweets response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "tweets": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tweet"
+                      },
+                      "description": "Array of tweets"
+                    },
+                    "has_next_page": {
+                      "type": "boolean",
+                      "description": "Indicates if there are more results available"
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor for fetching the next page of results"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  },
+                  "required": [
+                    "tweets",
+                    "status",
+                    "message",
+                    "has_next_page",
+                    "next_cursor"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    "/twitter/tweet/thread_context": {
+      "get": {
+        "description": "Get the thread context of a tweet. Suppose a tweet thread consists of t1, t2 (replying to t1), t3 (replying to t2), and t4, t5, t6 (all replying to t3). If we provide an API where you input t3 and receive t1, t2, t3, t4, t5, t6. Pagination is supported. The pagination size cannot be set (due to Twitter's limitations), and the data returned per page is not fixed.",
+        "parameters": [
+          {
+            "name": "tweetId",
+            "in": "query",
+            "description": "The tweet ID to get. Can be a reply tweet or a original tweet.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "The cursor to paginate through the results. First page is \"\".",
+            "schema": {
+              "type": "string",
+              "format": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tweet thread context response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "replies": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Tweet"
+                      },
+                      "description": "Array of tweets in the thread"
+                    },
+                    "has_next_page": {
+                      "type": "boolean",
+                      "description": "Indicates if there are more results available. If true, use next_cursor to fetch the next page. Warning: Due to Twitter API inconsistency, has_more might return true even when no additional data exists. In such cases, subsequent requests will return empty results - this is a known platform limitation."
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "description": "Cursor for fetching the next page of results"
+                    },
+                    "status": {
+                      "type": "string",
+                      "description": "Status of the request.success or error",
+                      "enum": ["success", "error"]
+                    },
+                    "message": {
+                      "type": "string",
+                      "description": "Message of the request.error message"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Unexpected error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+
+  "components": {
+    "schemas": {
+      "Tweet": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["tweet"]
+          },
+          "id": {
+            "type": "string",
+            "description": "The ID of the tweet"
+          },
+          "url": {
+            "type": "string",
+            "description": "The URL of the tweet"
+          },
+          "text": {
+            "type": "string",
+            "description": "The text of the tweet"
+          },
+          "source": {
+            "type": "string",
+            "description": "The source of the tweet.eg. \"Twitter for iPhone\""
+          },
+          "retweetCount": {
+            "type": "integer",
+            "description": "The number of times the tweet has been retweeted"
+          },
+          "replyCount": {
+            "type": "integer",
+            "description": "The number of times the tweet has been replied to"
+          },
+          "likeCount": {
+            "type": "integer",
+            "description": "The number of times the tweet has been liked"
+          },
+          "quoteCount": {
+            "type": "integer",
+            "description": "The number of times the tweet has been quoted"
+          },
+          "viewCount": {
+            "type": "integer",
+            "description": "The number of times the tweet has been viewed"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "The date and time the tweet was created.eg. Tue Dec 10 07:00:30 +0000 2024"
+          },
+          "lang": {
+            "type": "string",
+            "description": "The language of the tweet.eg. \"en\".may be empty"
+          },
+          "bookmarkCount": {
+            "type": "integer",
+            "description": "The number of times the tweet has been bookmarked"
+          },
+          "isReply": {
+            "type": "boolean",
+            "description": "Indicates if the tweet is a reply"
+          },
+          "inReplyToId": {
+            "type": "string",
+            "description": "The ID of the tweet being replied to.may be empty"
+          },
+          "conversationId": {
+            "type": "string",
+            "description": "The ID of the conversation the tweet is part of.may be empty"
+          },
+          "inReplyToUserId": {
+            "type": "string",
+            "description": "The ID of the user being replied to.may be empty"
+          },
+          "inReplyToUsername": {
+            "type": "string",
+            "description": "The username of the user being replied to.may be empty"
+          },
+          "author": {
+            "$ref": "#/components/schemas/UserInfo",
+            "description": "The user who posted the tweet"
+          },
+          "entities": {
+            "$ref": "#/components/schemas/TweetEntities",
+            "description": "The entities in the tweet.eg. hashtags,urls,mentions"
+          },
+          "quoted_tweet": {
+            "$ref": "#/components/schemas/Tweet",
+            "description": "The tweet being quoted.may be null"
+          },
+          "retweeted_tweet": {
+            "$ref": "#/components/schemas/Tweet",
+            "description": "The tweet being retweeted.may be null"
+          }
+        }
+      },
+
+      "UserInfo": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["user"]
+          },
+          "userName": {
+            "type": "string",
+            "description": "The username of the Twitter user"
+          },
+          "url": {
+            "type": "string",
+            "description": "The x.com URL of the user's profile"
+          },
+          "id": {
+            "type": "string",
+            "description": "The unique identifier of the user"
+          },
+          "name": {
+            "type": "string",
+            "description": "The display name of the user"
+          },
+          "isBlueVerified": {
+            "type": "boolean",
+            "description": "Whether the user has Twitter Blue verification"
+          },
+          "verifiedType": {
+            "type": "string",
+            "description": "The type of verification. eg. \"government\" ,can be empty"
+          },
+          "profilePicture": {
+            "type": "string",
+            "description": "URL of the user's profile picture"
+          },
+          "coverPicture": {
+            "type": "string",
+            "description": "URL of the user's cover picture"
+          },
+          "description": {
+            "type": "string",
+            "description": "The user's profile description"
+          },
+          "location": {
+            "type": "string",
+            "description": "The user's location.for example: 東京の端っこ . may be empty"
+          },
+          "followers": {
+            "type": "integer",
+            "description": "Number of followers"
+          },
+          "following": {
+            "type": "integer",
+            "description": "Number of accounts following"
+          },
+          "canDm": {
+            "type": "boolean",
+            "description": "Whether the user can receive DMs"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "When the account was created.for example: Thu Dec 13 08:41:26 +0000 2007"
+          },
+          "favouritesCount": {
+            "type": "integer",
+            "description": "Number of favorites"
+          },
+          "statusesCount": {
+            "type": "integer",
+            "description": "Number of status updates"
+          }
+        }
+      },
+
+      "TweetEntities": {
+        "type": "object",
+        "properties": {
+          "hashtags": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "indices": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  }
+                },
+                "text": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "urls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "display_url": {
+                  "type": "string"
+                },
+                "expanded_url": {
+                  "type": "string"
+                },
+                "indices": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  }
+                },
+                "url": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "user_mentions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id_str": {
+                  "type": "string",
+                  "description": "The ID of the user being mentioned"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "The name of the user being mentioned"
+                },
+                "screen_name": {
+                  "type": "string",
+                  "description": "The screen name of the user being mentioned"
+                }
+              }
+            }
+          }
+        }
+      },
+
+      "Error": {
+        "required": ["error", "message"],
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  }
+}

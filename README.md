@@ -10,7 +10,7 @@ Utilities
 - [xymake.badge](xymake.badge/) - github badge for a thread
 - [xymake.abc](xymake.abc/) - double struck API
 - [profile](profile) - api to easily get an x profile
-- [twitterapi-openapi](twitterapi-openapi) - API for X data service
+- [twitterapi-openapi](twitterapi-openapi) - API spec for X data service
 
 Other
 
