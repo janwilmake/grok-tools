@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "queryable-object": "0.0.21",
     "simplerauth-client": "0.0.20"
   },
   "devDependencies": {

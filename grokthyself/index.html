@@ -147,6 +147,36 @@
         .x-logo {
             filter: drop-shadow(1px 1px 2px rgba(139, 69, 19, 0.3));
         }
+
+        .works-with-title {
+            font-family: "Trajan Pro", "Crimson Text", serif;
+            font-size: clamp(2rem, 5vw, 3rem);
+            color: #8b4513;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            margin-bottom: 2rem;
+        }
+
+        .ai-logo {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            filter: drop-shadow(2px 2px 4px rgba(139, 69, 19, 0.2));
+        }
+
+        .ai-logo:hover {
+            transform: scale(1.1) translateY(-2px);
+            filter: drop-shadow(4px 4px 8px rgba(139, 69, 19, 0.3));
+        }
+
+        .works-description {
+            font-size: clamp(1rem, 2.5vw, 1.25rem);
+            color: #654321;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            line-height: 1.6;
+        }
     </style>
 </head>
 
@@ -169,7 +199,7 @@
             </p>
 
             <!-- Login Button -->
-            <a href="/login" class="papyrus-button inline-flex items-center gap-4 hover:no-underline">
+            <a href="/login" class="papyrus-button inline-flex items-center gap-4 hover:no-underline mb-20">
                 Login with
                 <svg class="w-8 h-8 x-logo" viewBox="0 0 24 24" fill="currentColor" aria-label="X">
                     <path
@@ -178,8 +208,30 @@
             </a>
         </div>
 
+        <!-- Works With Section -->
+        <div class="text-center max-w-4xl mx-auto mb-20 fade-in">
+            <h2 class="works-with-title">Works with Your Favorite AI Tools</h2>
+
+            <div class="flex flex-wrap justify-center items-center gap-8 mb-8">
+                <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" alt="Cursor" class="ai-logo">
+                <img src="https://www.google.com/s2/favicons?domain=code.visualstudio.com&sz=64" alt="VS Code"
+                    class="ai-logo">
+                <img src="https://www.google.com/s2/favicons?domain=claude.ai&sz=64" alt="Claude" class="ai-logo">
+                <img src="https://www.google.com/s2/favicons?domain=codeium.com&sz=64" alt="Windsurf" class="ai-logo">
+                <img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64" alt="Gemini"
+                    class="ai-logo">
+                <img src="https://www.google.com/s2/favicons?domain=chatgpt.com&sz=64" alt="ChatGPT"
+                    class="ai-logo bg-white p-2">
+            </div>
+
+            <p class="works-description">
+                Connect with your favorite AI assistants through MCP (Model Context Protocol)
+                and direct integrations to unlock the full potential of your digital self.
+            </p>
+        </div>
+
         <!-- Footer -->
-        <footer class="absolute bottom-4 text-center text-amber-800 opacity-60">
+        <footer class="text-center text-amber-800 opacity-60">
             <p class="text-sm">
                 © 2025 Grok Thyself. Not affiliated with X Corp.
             </p>
@@ -191,7 +243,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const elements = document.querySelectorAll('.fade-in');
             elements.forEach((el, index) => {
-                el.style.animationDelay = `${index * 0.2}s`;
+                el.style.animationDelay = `${index * 0.4}s`;
             });
         });
     </script>

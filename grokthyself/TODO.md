@@ -20,5 +20,6 @@ How:
 
 TODO:
 
+- Build out POC
 - Allow stripeflare as middleware with userID inserted
-- Build out mvp
+- When purchasing for $99 scrape until balance <0
