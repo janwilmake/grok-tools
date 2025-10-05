@@ -3,7 +3,11 @@
 
 import { DurableObject } from "cloudflare:workers";
 import { UserContext, withSimplerAuth } from "simplerauth-client";
-import { Queryable, studioMiddleware } from "queryable-object";
+import {
+  Queryable,
+  QueryableHandler,
+  studioMiddleware,
+} from "queryable-object";
 import { withMcp } from "with-mcp";
 //@ts-ignore
 import openapi from "./openapi.json";
@@ -13,10 +17,13 @@ import loginPage from "./login-template.html";
 import pricingTemplate from "./pricing-template.html";
 import Stripe from "stripe";
 
+const PAYMENT_LINK_ID = "plink_1SErNBCL0Yranfl4GPNXyXsH";
 const DO_NAME_PREFIX = "v4:";
+const SYNC_COST_PER_POST = 0.00015;
+const SYNC_OVERLAP_HOURS = 24;
 
 export interface Env {
-  USER_DO: DurableObjectNamespace<UserDO>;
+  USER_DO: DurableObjectNamespace<UserDO & QueryableHandler>;
   X_API_KEY: string;
   STRIPE_WEBHOOK_SIGNING_SECRET: string;
   STRIPE_SECRET: string;
@@ -132,6 +139,10 @@ interface User extends Record<string, any> {
   balance: number;
   initialized: number;
   scrape_status: "pending" | "in_progress" | "completed" | "failed";
+  synced_from: string | null;
+  synced_from_cursor: string | null;
+  synced_until: string | null;
+  is_sync_complete: number;
   created_at: string;
   updated_at: string;
 }
@@ -159,7 +170,9 @@ interface UserStats {
   isPublic: boolean;
   initialized: boolean;
   scrapeStatus: "pending" | "in_progress" | "completed" | "failed";
-  posts?: Post[];
+  syncComplete: boolean;
+  syncedFrom: string | null;
+  syncedUntil: string | null;
 }
 
 const dashboardPage = (
@@ -225,19 +238,6 @@ const dashboardPage = (
             background: linear-gradient(145deg, #d2b48c, #deb887);
             transform: translateY(-1px);
         }
-
-        .post-card {
-            background: rgba(255, 255, 255, 0.6);
-            border: 1px solid #d2b48c;
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .loading {
-            opacity: 0.6;
-            pointer-events: none;
-        }
     </style>
 </head>
 <body class="text-amber-900">
@@ -272,34 +272,44 @@ const dashboardPage = (
                 
                 <div class="grid md:grid-cols-2 gap-6">
                     <div>
-                        <h3 class="text-lg font-semibold mb-3 text-amber-800">Your Digital Self</h3>
+                        <h3 class="text-lg font-semibold mb-3 text-amber-800">Sync Status</h3>
                         <p class="text-amber-700 mb-4">
                             ${
-                              stats.scrapeStatus === "completed"
-                                ? "Your X content has been processed and is ready for AI analysis."
+                              stats.syncComplete
+                                ? "Your X content is fully synchronized and ready for AI analysis."
                                 : stats.scrapeStatus === "in_progress"
-                                ? "Processing your X content... This may take a few minutes."
+                                ? "Synchronizing your X content... This may take a while."
                                 : stats.scrapeStatus === "failed"
-                                ? "Failed to process your content. Please refresh to retry."
-                                : "Initializing your digital self..."
+                                ? "Failed to sync your content. Please refresh to retry."
+                                : "Ready to start synchronization."
                             }
                         </p>
-
+                        ${
+                          stats.syncedFrom || stats.syncedUntil
+                            ? `<div class="text-sm text-amber-600">
+                                ${
+                                  stats.syncedFrom
+                                    ? `<div>Synced from: ${new Date(
+                                        stats.syncedFrom
+                                      ).toLocaleDateString()}</div>`
+                                    : ""
+                                }
+                                ${
+                                  stats.syncedUntil
+                                    ? `<div>Synced until: ${new Date(
+                                        stats.syncedUntil
+                                      ).toLocaleDateString()}</div>`
+                                    : ""
+                                }
+                              </div>`
+                            : ""
+                        }
                     </div>
                     
                     <div>
                         <h3 class="text-lg font-semibold mb-3 text-amber-800">Actions</h3>
-
-
-                        
-
-
                         <div class="space-y-3">
-                            <a href="/admin" target="_blank" class="papyrus-button block text-center ${
-                              stats.scrapeStatus !== "completed"
-                                ? "opacity-50 pointer-events-none"
-                                : ""
-                            }">Admin Panel</a>
+                            <a href="/admin" target="_blank" class="papyrus-button block text-center">Admin Panel</a>
                             <a href="/pricing" class="papyrus-button block text-center">Pricing</a>
                             <span onclick="window.location.href='/${
                               user.username
@@ -319,23 +329,23 @@ const dashboardPage = (
                         <div class="text-2xl font-bold text-amber-700">${
                           stats.postCount
                         }</div>
-                        <div class="text-sm text-amber-600">Posts Analyzed</div>
+                        <div class="text-sm text-amber-600">Posts Synced</div>
                     </div>
                     <div>
-                        <div class="text-2xl font-bold text-amber-700">${
-                          stats.balance
-                        }</div>
+                        <div class="text-2xl font-bold text-amber-700">$${(
+                          stats.balance / 100
+                        ).toFixed(2)}</div>
                         <div class="text-sm text-amber-600">Credits</div>
                     </div>
                     <div>
                         <div class="text-2xl font-bold text-amber-700">${
-                          stats.scrapeStatus === "completed"
-                            ? "Active"
+                          stats.syncComplete
+                            ? "Complete"
                             : stats.scrapeStatus === "in_progress"
-                            ? "Processing"
+                            ? "Syncing"
                             : stats.scrapeStatus === "failed"
                             ? "Failed"
-                            : "Pending"
+                            : "Ready"
                         }</div>
                         <div class="text-sm text-amber-600">Status</div>
                     </div>
@@ -347,49 +357,6 @@ const dashboardPage = (
                     </div>
                 </div>
             </div>
-
-            ${
-              stats.posts && stats.posts.length > 0
-                ? `
-            <!-- Posts Preview -->
-            <div class="papyrus-card p-6">
-                <h3 class="text-lg font-semibold mb-4 text-amber-800">Recent Posts Preview</h3>
-                <div class="max-h-96 overflow-y-auto">
-                    ${stats.posts
-                      .slice(0, 10)
-                      .map(
-                        (post) => `
-                    <div class="post-card">
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="text-sm text-amber-600">@${
-                              post.author_username
-                            }</span>
-                            <span class="text-xs text-amber-500">${new Date(
-                              post.created_at
-                            ).toLocaleDateString()}</span>
-                        </div>
-                        <p class="text-amber-800 mb-2">${post.text}</p>
-                        <div class="flex gap-4 text-xs text-amber-600">
-                            <span>❤️ ${post.like_count}</span>
-                            <span>🔄 ${post.retweet_count}</span>
-                            <span>💬 ${post.reply_count}</span>
-                        </div>
-                    </div>
-                    `
-                      )
-                      .join("")}
-                    ${
-                      stats.postCount > 10
-                        ? `<p class="text-center text-amber-600 mt-4">... and ${
-                            stats.postCount - 10
-                          } more posts</p>`
-                        : ""
-                    }
-                </div>
-            </div>
-            `
-                : ""
-            }
         </div>
     </main>
 </body>
@@ -397,8 +364,8 @@ const dashboardPage = (
 
 @Queryable()
 export class UserDO extends DurableObject<Env> {
-  private sql: SqlStorage;
-  private try: SqlStorage["exec"];
+  public sql: SqlStorage;
+  public try: SqlStorage["exec"];
 
   constructor(state: DurableObjectState, env: Env) {
     super(state, env);
@@ -424,6 +391,10 @@ export class UserDO extends DurableObject<Env> {
         balance INTEGER DEFAULT 0,
         initialized INTEGER DEFAULT 0,
         scrape_status TEXT DEFAULT 'pending',
+        synced_from TEXT,
+        synced_from_cursor TEXT,
+        synced_until TEXT,
+        is_sync_complete INTEGER DEFAULT 0,
         created_at TEXT DEFAULT CURRENT_TIMESTAMP,
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP
       )
@@ -449,7 +420,12 @@ export class UserDO extends DurableObject<Env> {
       )
     `);
 
+    // Add new columns if they don't exist
     this.try(`ALTER TABLE users ADD COLUMN is_public INTEGER DEFAULT 0`);
+    this.try(`ALTER TABLE users ADD COLUMN synced_from TEXT`);
+    this.try(`ALTER TABLE users ADD COLUMN synced_from_cursor TEXT`);
+    this.try(`ALTER TABLE users ADD COLUMN synced_until TEXT`);
+    this.try(`ALTER TABLE users ADD COLUMN is_sync_complete INTEGER DEFAULT 0`);
 
     // Create indexes
     this.sql.exec(
@@ -458,9 +434,25 @@ export class UserDO extends DurableObject<Env> {
     this.sql.exec(
       `CREATE INDEX IF NOT EXISTS idx_posts_tweet_id ON posts (tweet_id)`
     );
+    this.sql.exec(
+      `CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts (created_at)`
+    );
   }
 
-  // Add these methods to your UserDO class
+  async alarm(): Promise<void> {
+    console.log("Alarm triggered - continuing sync");
+
+    // Get user from database
+    const user = this.sql
+      .exec<User>(`SELECT * FROM users LIMIT 1`)
+      .toArray()[0];
+    if (!user) {
+      console.log("No user found for alarm");
+      return;
+    }
+
+    await this.performSync(user.id, user.username);
+  }
 
   private parseSearchQuery(query: string): ParsedQuery {
     const parsed: ParsedQuery = {
@@ -609,29 +601,29 @@ export class UserDO extends DurableObject<Env> {
       .exec<{ conversation_id: string }>(searchSql, ...searchParams)
       .toArray();
 
-    console.log(`Found ${conversationResults.length} matching conversations`);
-
     if (conversationResults.length === 0) {
       return "# No posts found\n\nYour search didn't match any posts.";
     }
 
     // Get conversation IDs
-    const conversationIds = conversationResults
-      .map((row) => row.conversation_id)
-      .filter((id) => id && id.trim() !== "");
+    const conversationIds = Array.from(
+      new Set(
+        conversationResults
+          .map((row) => row.conversation_id)
+          .filter((id) => id && id.trim() !== "")
+      )
+    );
 
     if (conversationIds.length === 0) {
       return "# No valid conversations found\n\nThe matching posts don't have valid conversation IDs.";
     }
 
-    console.log("Valid conversation IDs:", conversationIds);
-
     // Fetch all posts for these conversations
-    const placeholders = conversationIds.map(() => "?").join(",");
     const allPostsResult = this.sql
       .exec<Post>(
-        `SELECT * FROM posts WHERE conversation_id IN (${placeholders})`,
-        ...conversationIds
+        `SELECT * FROM posts WHERE conversation_id IN (${conversationIds
+          .map((x) => `'${x}'`)
+          .join(",")})`
       )
       .toArray();
 
@@ -726,107 +718,225 @@ export class UserDO extends DurableObject<Env> {
 
     const user = userResult[0];
 
-    // Start background scraping if not started
-    if (user.scrape_status === "pending") {
-      console.log(`Starting background scrape for user ${authUser.username}`);
+    // Start sync if not started and user has balance
+    if (user.scrape_status === "pending" && user.balance > 0) {
+      console.log(`Starting sync for user ${authUser.username}`);
       this.sql.exec(
         `UPDATE users SET scrape_status = 'in_progress', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
         authUser.id
       );
 
-      // Start background task
-      this.ctx.waitUntil(
-        this.performBackgroundScrape(authUser.id, authUser.username)
-      );
+      // Start sync
+      this.ctx.waitUntil(this.performSync(authUser.id, authUser.username));
     }
 
     return user;
   }
 
-  private async performBackgroundScrape(
-    userId: string,
-    username: string
-  ): Promise<void> {
+  async startSync(username: string): Promise<void> {
+    console.log(`Starting sync for user ${username}`);
+    const user = this.sql
+      .exec<User>(`SELECT * FROM users WHERE username = ?`, username)
+      .toArray()[0];
+
+    if (!user) {
+      console.log("Couldn't find user");
+      return;
+    }
+
+    this.sql.exec(
+      `UPDATE users SET scrape_status = 'in_progress', updated_at = CURRENT_TIMESTAMP WHERE username = ?`,
+      username
+    );
+
+    await this.performSync(user.id, user.username);
+  }
+
+  private async performSync(userId: string, username: string): Promise<void> {
     try {
-      console.log(
-        `Starting background scrape for user ${username} (${userId})`
-      );
+      console.log(`Performing sync for user ${username} (${userId})`);
 
-      // Get user's recent posts
-      const postsResponse = await this.fetchUserPosts(username);
-      console.log(
-        `Posts API response status: ${postsResponse.msg}`,
-        postsResponse
-      );
+      // Get current user state
+      const userResult = this.sql
+        .exec<User>(`SELECT * FROM users WHERE id = ?`, userId)
+        .toArray();
 
-      if (
-        postsResponse.msg === "success" &&
-        postsResponse.data?.tweets?.length > 0
-      ) {
-        console.log(
-          `Found ${postsResponse.data.tweets.length} tweets for ${username}`
-        );
+      if (userResult.length === 0) {
+        console.error(`User ${userId} not found`);
+        return;
+      }
 
-        // Store posts and get comments for each
-        for (const tweet of postsResponse.data.tweets) {
-          try {
-            await this.storePost(userId, tweet);
-            console.log(`Stored tweet ${tweet.id}`);
+      const user = userResult[0];
 
-            // Get thread context (comments) for each post
-            try {
-              const threadResponse = await this.fetchThreadContext(tweet.id);
-              console.log(
-                `Thread API response for ${tweet.id}:`,
-                threadResponse.status
-              );
-
-              if (
-                threadResponse.status === "success" &&
-                threadResponse.tweets &&
-                threadResponse.tweets.length > 0
-              ) {
-                console.log(
-                  `Found ${threadResponse.tweets.length} replies for tweet ${tweet.id}`
-                );
-                for (const reply of threadResponse.tweets) {
-                  await this.storePost(userId, reply);
-                }
-              }
-            } catch (error) {
-              console.error(
-                `Failed to fetch thread for tweet ${tweet.id}:`,
-                error
-              );
-            }
-          } catch (error) {
-            console.error(`Failed to process tweet ${tweet.id}:`, error);
-          }
-        }
-
-        // Mark as completed and initialized
+      // Check if user has sufficient balance
+      if (user.balance <= 0) {
+        console.log(`User ${username} has no balance, stopping sync`);
         this.sql.exec(
-          `UPDATE users SET scrape_status = 'completed', initialized = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          `UPDATE users SET scrape_status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
           userId
         );
+        return;
+      }
 
-        console.log(`Completed background scrape for user ${username}`);
-      } else {
-        console.error(
-          `No tweets found for user ${username}. API Response:`,
-          postsResponse
+      // Determine sync direction and parameters
+      const now = new Date();
+      let syncBackwards = false;
+      let cursor: string | undefined;
+
+      if (!user.is_sync_complete) {
+        // First sync - start from now and go backwards
+        syncBackwards = true;
+        cursor = user.synced_from_cursor;
+
+        console.log(
+          `First sync for ${username} - going backwards from ${cursor}`
         );
+      } else {
+        const syncedUntilDate = new Date(user.synced_until);
+        const overlapDate = new Date(
+          syncedUntilDate.getTime() - SYNC_OVERLAP_HOURS * 60 * 60 * 1000
+        );
+        cursor = user.synced_from_cursor;
+        user.synced_until;
+        // TODO: this doesn't seem right.
+      }
 
-        // Mark as failed
+      // Fetch posts
+      const postsResponse = await this.fetchUserPosts(username, cursor);
+      console.log(`Posts API response status: ${postsResponse.msg}`);
+
+      if (
+        postsResponse.msg !== "success" ||
+        !postsResponse.data?.tweets?.length
+      ) {
+        console.log(`No new posts found for ${username}`);
+
+        if (syncBackwards && !user.is_sync_complete) {
+          // Mark sync as complete if we were going backwards and found no more posts
+          this.sql.exec(
+            `UPDATE users SET is_sync_complete = 1, synced_from_cursor = NULL, scrape_status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            userId
+          );
+          console.log(`Backwards sync completed for ${username}`);
+        }
+        return;
+      }
+
+      const tweets = postsResponse.data.tweets;
+      console.log(`Found ${tweets.length} tweets for ${username}`);
+
+      // Process all tweets in parallel
+      const tweetProcessingPromises = tweets.map(async (tweet) => {
+        let postsProcessed = 0;
+
+        try {
+          // Store the main tweet
+          await this.storePost(userId, tweet);
+          postsProcessed++;
+
+          // Get thread context for this tweet
+          try {
+            const threadResponse = await this.fetchThreadContext(tweet.id);
+
+            if (
+              threadResponse.status === "success" &&
+              threadResponse.tweets?.length
+            ) {
+              // Store all thread replies in parallel
+              await Promise.all(
+                threadResponse.tweets.map(async (reply) => {
+                  await this.storePost(userId, reply);
+                  return 1; // Count of posts processed
+                })
+              );
+              postsProcessed += threadResponse.tweets.length;
+            }
+          } catch (error) {
+            console.error(
+              `Failed to fetch thread for tweet ${tweet.id}:`,
+              error
+            );
+          }
+
+          return postsProcessed;
+        } catch (error) {
+          console.error(`Failed to process tweet ${tweet.id}:`, error);
+          return 0;
+        }
+      });
+
+      // Wait for all tweet processing to complete
+      const processingResults = await Promise.all(tweetProcessingPromises);
+      const totalPostsProcessed = processingResults.reduce(
+        (sum, count) => sum + count,
+        0
+      );
+
+      console.log(`Processed ${totalPostsProcessed} posts total`);
+
+      // Calculate cost and deduct from balance
+      const cost = Math.ceil(totalPostsProcessed * SYNC_COST_PER_POST * 100); // Convert to cents
+      console.log(
+        `Processed ${totalPostsProcessed} posts, cost: $${cost / 100}`
+      );
+
+      // Update user record
+      const newBalance = Math.max(0, user.balance - cost);
+      const oldestTweet = tweets[tweets.length - 1];
+      const newestTweet = tweets[0];
+
+      let updateQuery: string;
+      let updateParams: any[];
+
+      if (syncBackwards) {
+        // Update synced_from and cursor
+        updateQuery = `
+        UPDATE users SET 
+          balance = ?, 
+          synced_from = COALESCE(?, synced_from),
+          synced_from_cursor = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `;
+        updateParams = [
+          newBalance,
+          oldestTweet.createdAt,
+          postsResponse.next_cursor || oldestTweet.id,
+          userId,
+        ];
+      } else {
+        // Update synced_until
+        updateQuery = `
+        UPDATE users SET 
+          balance = ?, 
+          synced_until = ?,
+          updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `;
+        updateParams = [newBalance, newestTweet.createdAt, userId];
+      }
+
+      this.sql.exec(updateQuery, ...updateParams);
+
+      // Check if we should continue syncing
+      const shouldContinue =
+        newBalance > 0 &&
+        (postsResponse.has_next_page ||
+          (!syncBackwards && !user.is_sync_complete));
+
+      if (shouldContinue) {
+        console.log(`Scheduling next sync for ${username} in 1 second`);
+        // Schedule next sync in 1 second
+        await this.ctx.storage.setAlarm(Date.now() + 1000);
+      } else {
+        console.log(`Sync completed for ${username}`);
         this.sql.exec(
-          `UPDATE users SET scrape_status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          `UPDATE users SET scrape_status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
           userId
         );
       }
     } catch (error) {
-      console.error(`Background scrape failed for user ${username}:`, error);
-
-      // Mark as failed
+      console.error(`Sync failed for user ${username}:`, error);
       this.sql.exec(
         `UPDATE users SET scrape_status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
         userId
@@ -834,8 +944,16 @@ export class UserDO extends DurableObject<Env> {
     }
   }
 
-  private async fetchUserPosts(username: string): Promise<TwitterAPIResponse> {
-    const url = `https://api.twitterapi.io/twitter/user/last_tweets?userName=${username}&includeReplies=true`;
+  private async fetchUserPosts(
+    username: string,
+    cursor?: string
+  ): Promise<TwitterAPIResponse> {
+    let url = `https://api.twitterapi.io/twitter/user/last_tweets?userName=${username}&includeReplies=true`;
+
+    if (cursor) {
+      url += `&cursor=${cursor}`;
+    }
+
     console.log(`Fetching user posts from: ${url}`);
 
     const response = await fetch(url, {
@@ -866,7 +984,7 @@ export class UserDO extends DurableObject<Env> {
     const baseUrl = `https://api.twitterapi.io/twitter/tweet/thread_context?tweetId=${tweetId}`;
     const url = cursor ? `${baseUrl}&cursor=${cursor}` : baseUrl;
 
-    console.log(`Fetching thread context from: ${url}`);
+    // console.log(`Fetching thread context from: ${url}`);
 
     const response = await fetch(url, {
       headers: {
@@ -889,7 +1007,7 @@ export class UserDO extends DurableObject<Env> {
 
     // If there are more pages, recursively fetch them
     if (data.has_next_page && data.next_cursor) {
-      console.log(`Fetching next page with cursor: ${data.next_cursor}`);
+      // console.log(`Fetching next page with cursor: ${data.next_cursor}`);
 
       try {
         const nextPageData = await this.fetchThreadContext(
@@ -938,7 +1056,6 @@ export class UserDO extends DurableObject<Env> {
         tweet.conversationId || "",
         JSON.stringify(tweet)
       );
-      console.log(`Successfully stored post ${tweet.id} for user ${userId}`);
     } catch (error) {
       console.error(`Failed to store post ${tweet.id}:`, error);
     }
@@ -954,14 +1071,6 @@ export class UserDO extends DurableObject<Env> {
       )
       .toArray()[0] as { count: number };
 
-    // Get recent posts for preview
-    const postsResult = this.sql
-      .exec<Post>(
-        `SELECT * FROM posts WHERE user_id = ? ORDER BY created_at DESC LIMIT 20`,
-        user.id
-      )
-      .toArray();
-
     return {
       postCount: postCountResult.count,
       balance: user.balance,
@@ -973,7 +1082,9 @@ export class UserDO extends DurableObject<Env> {
         | "in_progress"
         | "completed"
         | "failed",
-      posts: postsResult.length > 0 ? postsResult : undefined,
+      syncComplete: Boolean(user.is_sync_complete),
+      syncedFrom: user.synced_from,
+      syncedUntil: user.synced_until,
     };
   }
 }
@@ -1016,7 +1127,7 @@ export default {
               dangerouslyDisableAuth: true,
             });
           } catch (error) {
-            console.error("Dashboard error:", error);
+            console.error("Admin error:", error);
             return new Response("Error loading admin", { status: 500 });
           }
         }
@@ -1034,7 +1145,7 @@ export default {
             );
 
             // Get user stats
-            const stats: any = await userDO.getUserStats(ctx.user);
+            const stats = await userDO.getUserStats(ctx.user);
             const dashboardHtml = dashboardPage(ctx.user, stats);
 
             return new Response(dashboardHtml, {
@@ -1044,6 +1155,22 @@ export default {
             console.error("Dashboard error:", error);
             return new Response("Error loading dashboard", { status: 500 });
           }
+        }
+
+        if (url.pathname === "/stripe-webhook") {
+          return handleStripeWebhook(request, env);
+        }
+        if (url.pathname === "/sync") {
+          if (!ctx.user?.username) {
+            return new Response("Unauthorized", { status: 401 });
+          }
+          const userDO = env.USER_DO.get(
+            env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.username)
+          );
+
+          // Start sync after payment
+          await userDO.startSync(ctx.user.username);
+          return new Response("Started sync");
         }
 
         // Handle pricing page
@@ -1060,8 +1187,6 @@ export default {
 
             // Get user stats to check premium status
             const stats = await userDO.getUserStats(ctx.user);
-
-            // Read the pricing template
 
             // Inject user data into the template
             const pricingPageWithData = pricingTemplate.replace(
@@ -1092,7 +1217,7 @@ export default {
           const maxTokensParam = url.searchParams.get("maxTokens");
           const maxTokens = maxTokensParam
             ? parseInt(maxTokensParam, 10)
-            : 50000;
+            : 10000;
 
           if (maxTokens < 1 || maxTokens > 5000000) {
             return new Response(
@@ -1125,7 +1250,7 @@ export default {
           );
 
           // Perform search
-          const markdown = await userDO.searchPosts(ctx.user.id, {
+          const markdown = await userDO.searchPosts(ctx.user?.id, {
             q: query,
             maxTokens,
           });
@@ -1195,9 +1320,7 @@ const streamToBuffer = async (
 
 async function handleStripeWebhook(
   request: Request,
-  env: Env,
-  ctx: ExecutionContext,
-  version: string
+  env: Env
 ): Promise<Response> {
   if (!request.body) {
     return new Response(JSON.stringify({ error: "No body" }), {
@@ -1241,11 +1364,33 @@ async function handleStripeWebhook(
       return new Response("Payment not completed", { status: 400 });
     }
 
-    const { client_reference_id, amount_total } = session;
+    const {
+      client_reference_id: username,
+      amount_total,
+      payment_link,
+    } = session;
 
-    if (!client_reference_id) {
-      return new Response("Missing client_reference_id", { status: 400 });
+    if (payment_link !== PAYMENT_LINK_ID) {
+      return new Response("Invalid payment link", { status: 400 });
     }
+
+    if (!username) {
+      return new Response("Missing username", { status: 400 });
+    }
+
+    const userDO = env.USER_DO.get(
+      env.USER_DO.idFromName(DO_NAME_PREFIX + username)
+    );
+
+    // Update balance and premium status
+    await userDO.exec(
+      "UPDATE users SET is_premium = 1, balance = balance + ? WHERE username = ?",
+      amount_total,
+      username
+    );
+
+    // Start sync after payment
+    await userDO.startSync(username);
 
     return new Response("Payment processed successfully", { status: 200 });
   }
