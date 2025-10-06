@@ -21,7 +21,10 @@ const PAYMENT_LINK_ID = "plink_1SErNBCL0Yranfl4GPNXyXsH";
 const DO_NAME_PREFIX = "v4:";
 const SYNC_COST_PER_POST = 0.00015;
 const SYNC_OVERLAP_HOURS = 24;
-
+const FREE_SIGNUP_BALANCE = 100; // $1.00 in cents
+const FREE_MAX_HISTORIC_POSTS = 2000;
+const PREMIUM_MAX_HISTORIC_POSTS = 100000;
+const ADMIN_USERNAME = "janwilmake";
 export interface Env {
   USER_DO: DurableObjectNamespace<UserDO & QueryableHandler>;
   X_API_KEY: string;
@@ -214,14 +217,19 @@ interface User extends Record<string, any> {
   username: string;
   is_premium: number;
   is_public: number;
-  is_featured: number; // Add this line
+  is_featured: number;
   balance: number;
-  initialized: number;
   scrape_status: "pending" | "in_progress" | "completed" | "failed";
+
+  // New sync fields
+  history_max_count: number;
+  history_cursor: string | null;
+  history_count: number;
+  history_is_completed: number;
   synced_from: string | null;
   synced_from_cursor: string | null;
   synced_until: string | null;
-  is_sync_complete: number;
+
   created_at: string;
   updated_at: string;
 }
@@ -240,6 +248,7 @@ interface Post extends Record<string, any> {
   is_reply: number;
   conversation_id: string;
   raw_data: string;
+  is_historic: number; // 1 for historic sync, 0 for frontfill
 }
 
 interface UserStats {
@@ -247,13 +256,1202 @@ interface UserStats {
   balance: number;
   isPremium: boolean;
   isPublic: boolean;
-  isFeatured: boolean; // Add this line
-  initialized: boolean;
+  isFeatured: boolean;
   scrapeStatus: "pending" | "in_progress" | "completed" | "failed";
-  syncComplete: boolean;
+  historyMaxCount: number;
+  historyCount: number;
+  historyIsCompleted: boolean;
   syncedFrom: string | null;
   syncedUntil: string | null;
 }
+
+@Queryable()
+export class UserDO extends DurableObject<Env> {
+  public sql: SqlStorage;
+  public try: SqlStorage["exec"];
+  constructor(state: DurableObjectState, env: Env) {
+    super(state, env);
+    this.sql = state.storage.sql;
+    this.try = (query: string, ...params) => {
+      try {
+        return this.sql.exec(query, ...params);
+      } catch {}
+    };
+
+    this.env = env;
+    this.initializeTables();
+  }
+
+  private initializeTables() {
+    // Create users table with new schema
+    this.sql.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      username TEXT UNIQUE NOT NULL,
+      is_public INTEGER DEFAULT 0,
+      is_premium INTEGER DEFAULT 0,
+      is_featured INTEGER DEFAULT 0,
+      balance INTEGER DEFAULT ${FREE_SIGNUP_BALANCE},
+      scrape_status TEXT DEFAULT 'pending',
+      
+      history_max_count INTEGER DEFAULT ${FREE_MAX_HISTORIC_POSTS},
+      history_cursor TEXT,
+      history_count INTEGER DEFAULT 0,
+      history_is_completed INTEGER DEFAULT 0,
+      synced_from TEXT,
+      synced_from_cursor TEXT,
+      synced_until TEXT,
+      
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+    // Create posts table with new columns
+    this.sql.exec(`
+    CREATE TABLE IF NOT EXISTS posts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      tweet_id TEXT UNIQUE NOT NULL,
+      text TEXT,
+      author_username TEXT,
+      author_name TEXT,
+      created_at TEXT,
+      like_count INTEGER DEFAULT 0,
+      retweet_count INTEGER DEFAULT 0,
+      reply_count INTEGER DEFAULT 0,
+      is_reply INTEGER DEFAULT 0,
+      conversation_id TEXT,
+      raw_data TEXT,
+      author_profile_image_url TEXT,
+      author_bio TEXT,
+      author_location TEXT,
+      author_url TEXT,
+      author_verified INTEGER DEFAULT 0,
+      bookmark_count INTEGER DEFAULT 0,
+      view_count INTEGER DEFAULT 0,
+      is_historic INTEGER DEFAULT 0,
+      FOREIGN KEY (user_id) REFERENCES users (id)
+    )
+  `);
+
+    // Add new column migrations for users table
+    this.try(`ALTER TABLE users ADD COLUMN is_public INTEGER DEFAULT 0`);
+    this.try(`ALTER TABLE users ADD COLUMN is_featured INTEGER DEFAULT 0`);
+    this.try(
+      `ALTER TABLE users ADD COLUMN history_max_count INTEGER DEFAULT ${FREE_MAX_HISTORIC_POSTS}`
+    );
+    this.try(`ALTER TABLE users ADD COLUMN history_cursor TEXT`);
+    this.try(`ALTER TABLE users ADD COLUMN history_count INTEGER DEFAULT 0`);
+    this.try(
+      `ALTER TABLE users ADD COLUMN history_is_completed INTEGER DEFAULT 0`
+    );
+    this.try(`ALTER TABLE users ADD COLUMN synced_from TEXT`);
+    this.try(`ALTER TABLE users ADD COLUMN synced_from_cursor TEXT`);
+    this.try(`ALTER TABLE users ADD COLUMN synced_until TEXT`);
+
+    // Add new column migrations for posts table
+    this.try(`ALTER TABLE posts ADD COLUMN author_profile_image_url TEXT`);
+    this.try(`ALTER TABLE posts ADD COLUMN author_bio TEXT`);
+    this.try(`ALTER TABLE posts ADD COLUMN author_location TEXT`);
+    this.try(`ALTER TABLE posts ADD COLUMN author_url TEXT`);
+    this.try(`ALTER TABLE posts ADD COLUMN author_verified INTEGER DEFAULT 0`);
+    this.try(`ALTER TABLE posts ADD COLUMN bookmark_count INTEGER DEFAULT 0`);
+    this.try(`ALTER TABLE posts ADD COLUMN view_count INTEGER DEFAULT 0`);
+    this.try(`ALTER TABLE posts ADD COLUMN is_historic INTEGER DEFAULT 0`);
+
+    // Remove old columns if they exist
+    this.try(`ALTER TABLE users DROP COLUMN initialized`);
+    this.try(`ALTER TABLE users DROP COLUMN is_sync_complete`);
+
+    // Create indexes
+    this.try(`CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts (user_id)`);
+    this.try(
+      `CREATE INDEX IF NOT EXISTS idx_posts_tweet_id ON posts (tweet_id)`
+    );
+    this.try(
+      `CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts (created_at)`
+    );
+    this.try(
+      `CREATE INDEX IF NOT EXISTS idx_posts_author_created ON posts (author_username, created_at DESC)`
+    );
+    this.try(
+      `CREATE INDEX IF NOT EXISTS idx_posts_is_historic ON posts (is_historic)`
+    );
+  }
+
+  async alarm(): Promise<void> {
+    console.log("Alarm triggered - continuing sync");
+
+    // Get user from database
+    const user = this.sql
+      .exec<User>(`SELECT * FROM users LIMIT 1`)
+      .toArray()[0];
+    if (!user) {
+      console.log("No user found for alarm");
+      return;
+    }
+
+    await this.performSync(user.id, user.username);
+  }
+
+  private parseSearchQuery(query: string): ParsedQuery {
+    const parsed: ParsedQuery = {
+      keywords: [],
+      operators: [],
+    };
+
+    if (!query) return parsed;
+
+    // Extract from: parameter
+    const fromMatch = query.match(/from:(\w+)/i);
+    if (fromMatch) {
+      parsed.from = fromMatch[1];
+      query = query.replace(/from:\w+/gi, "").trim();
+    }
+
+    // Extract before: parameter
+    const beforeMatch = query.match(/before:(\d{4}-\d{2}-\d{2})/i);
+    if (beforeMatch) {
+      parsed.before = new Date(beforeMatch[1]);
+      query = query.replace(/before:\d{4}-\d{2}-\d{2}/gi, "").trim();
+    }
+
+    // Extract after: parameter
+    const afterMatch = query.match(/after:(\d{4}-\d{2}-\d{2})/i);
+    if (afterMatch) {
+      parsed.after = new Date(afterMatch[1]);
+      query = query.replace(/after:\d{4}-\d{2}-\d{2}/gi, "").trim();
+    }
+
+    // Extract AND/OR operators and remaining keywords
+    const tokens = query.split(/\s+/).filter((token) => token.length > 0);
+
+    for (const token of tokens) {
+      if (token.toUpperCase() === "AND" || token.toUpperCase() === "OR") {
+        parsed.operators.push(token.toUpperCase() as "AND" | "OR");
+      } else if (token.length > 0) {
+        parsed.keywords.push(token.toLowerCase());
+      }
+    }
+
+    return parsed;
+  }
+
+  private buildSearchSql(parsedQuery: ParsedQuery): {
+    sql: string;
+    params: any[];
+  } {
+    let sql = `SELECT DISTINCT conversation_id FROM posts WHERE 1=1`;
+    const params: any[] = [];
+
+    // Add from filter
+    if (parsedQuery.from) {
+      sql += ` AND LOWER(author_username) = LOWER(?)`;
+      params.push(parsedQuery.from);
+    }
+
+    // Add date filters
+    if (parsedQuery.before) {
+      sql += ` AND date(created_at) < ?`;
+      params.push(parsedQuery.before.toISOString().split("T")[0]);
+    }
+
+    if (parsedQuery.after) {
+      sql += ` AND date(created_at) > ?`;
+      params.push(parsedQuery.after.toISOString().split("T")[0]);
+    }
+
+    // Add keyword filters
+    if (parsedQuery.keywords.length > 0) {
+      const keywordConditions: string[] = [];
+
+      for (const keyword of parsedQuery.keywords) {
+        keywordConditions.push(`LOWER(text) LIKE ?`);
+        params.push(`%${keyword}%`);
+      }
+
+      if (keywordConditions.length > 0) {
+        // Default to AND if no operators specified, otherwise use the operators
+        const operator =
+          parsedQuery.operators.length > 0
+            ? parsedQuery.operators[0] === "OR"
+              ? " OR "
+              : " AND "
+            : " AND ";
+
+        sql += ` AND (${keywordConditions.join(operator)})`;
+      }
+    }
+
+    return { sql, params };
+  }
+
+  private estimateTokens(text: string): number {
+    return Math.ceil(text.length / 5);
+  }
+
+  async getAuthorStats(
+    requestingUsername: string | undefined,
+    limit?: number
+  ): Promise<AuthorStats[]> {
+    const user = this.sql.exec<User>(`SELECT * FROM users`).toArray()[0];
+
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    if (
+      !user.is_public &&
+      requestingUsername !== user.username &&
+      requestingUsername !== ADMIN_USERNAME
+    ) {
+      throw new Error("User did not make posts public");
+    }
+
+    // Get author stats with most recent post data for each author
+    const authorStatsResult = this.sql
+      .exec<{
+        author_username: string;
+        author_name: string;
+        post_count: number;
+        author_profile_image_url: string;
+        author_bio: string;
+        author_location: string;
+        author_url: string;
+        author_verified: number;
+        latest_post_date: string;
+      }>(
+        `
+    WITH author_post_counts AS (
+      SELECT 
+        author_username,
+        COUNT(*) as post_count
+      FROM posts 
+      GROUP BY author_username
+    ),
+    latest_author_posts AS (
+      SELECT DISTINCT
+        author_username,
+        FIRST_VALUE(author_name) OVER (PARTITION BY author_username ORDER BY created_at DESC) as author_name,
+        FIRST_VALUE(author_profile_image_url) OVER (PARTITION BY author_username ORDER BY created_at DESC) as author_profile_image_url,
+        FIRST_VALUE(author_bio) OVER (PARTITION BY author_username ORDER BY created_at DESC) as author_bio,
+        FIRST_VALUE(author_location) OVER (PARTITION BY author_username ORDER BY created_at DESC) as author_location,
+        FIRST_VALUE(author_url) OVER (PARTITION BY author_username ORDER BY created_at DESC) as author_url,
+        FIRST_VALUE(author_verified) OVER (PARTITION BY author_username ORDER BY created_at DESC) as author_verified,
+        FIRST_VALUE(created_at) OVER (PARTITION BY author_username ORDER BY created_at DESC) as latest_post_date
+      FROM posts
+    )
+    SELECT 
+      apc.author_username,
+      lap.author_name,
+      apc.post_count,
+      lap.author_profile_image_url,
+      lap.author_bio,
+      lap.author_location,
+      lap.author_url,
+      lap.author_verified,
+      lap.latest_post_date
+    FROM author_post_counts apc
+    JOIN latest_author_posts lap ON apc.author_username = lap.author_username
+    ORDER BY apc.post_count DESC
+  `
+      )
+      .toArray();
+
+    const mapped = authorStatsResult
+      .map((row) => ({
+        username: row.author_username,
+        name: row.author_name || row.author_username,
+        postCount: row.post_count,
+        profileImageUrl: row.author_profile_image_url || "",
+        bio: row.author_bio || "",
+        location: row.author_location || "",
+        url: row.author_url || "",
+        isVerified: Boolean(row.author_verified),
+        latestPostDate: row.latest_post_date,
+      }))
+      .filter((row) => row.username !== user.username);
+
+    return limit ? mapped.slice(0, limit) : mapped;
+  }
+
+  private convertThreadToMarkdown(thread: ConversationThread): string {
+    const sortedPosts = thread.posts.sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+
+    let markdown = `# Thread\n\n`;
+
+    for (const post of sortedPosts) {
+      const date = new Date(post.created_at).toISOString().slice(0, 10);
+      const isReply = post.is_reply ? "\t↳" : "";
+
+      markdown += `${isReply}@${post.author_username} [${
+        post.tweet_id
+      }] (${date} ${post.like_count > 0 ? `❤️ ${post.like_count}` : ""}${
+        post.retweet_count > 0 ? ` 🔄 ${post.retweet_count}` : ""
+      }) - ${post.text.replaceAll("\n", "\t")}\n`;
+    }
+
+    return markdown + "\n\n";
+  }
+
+  private addPaymentNoticeIfNeeded(markdown: string, user: User): string {
+    if (!user.is_premium) {
+      const paymentNotice = `
+
+---
+
+**💰 Upgrade to Premium** 
+
+You're currently on the free tier (${user.history_count}/${user.history_max_count} historic posts synced).
+
+Upgrade to Premium for:
+- Up to 100,000 historic posts
+- Continued sync of future posts
+- Priority support
+
+[Upgrade now for $29 →](https://grokthyself.com/pricing)
+
+---
+
+`;
+      return markdown + paymentNotice;
+    }
+    return markdown;
+  }
+
+  async searchPosts(
+    username: string | undefined,
+    searchQuery: PostSearchQuery
+  ): Promise<string> {
+    const user = this.sql.exec<User>(`SELECT * FROM users`).toArray()[0];
+
+    if (!user) {
+      return `User not found`;
+    }
+
+    if (
+      !user.is_public &&
+      username !== user.username &&
+      username !== ADMIN_USERNAME
+    ) {
+      return `User did not make posts public`;
+    }
+
+    // Check if we should start a sync (frontfill)
+    if (username === user.username && this.shouldStartFrontfillSync(user)) {
+      console.log(`Starting frontfill sync for ${user.username}`);
+      this.ctx.waitUntil(this.performSync(user.id, user.username));
+    }
+
+    const maxTokens = searchQuery.maxTokens || 10000;
+    const parsedQuery = this.parseSearchQuery(searchQuery.q || "");
+
+    console.log("Parsed query:", parsedQuery);
+
+    // First, find matching conversation IDs
+    const { sql: searchSql, params: searchParams } =
+      this.buildSearchSql(parsedQuery);
+
+    console.log("Search SQL:", searchSql, "Params:", searchParams);
+
+    const conversationResults = this.sql
+      .exec<{ conversation_id: string }>(searchSql, ...searchParams)
+      .toArray();
+
+    if (conversationResults.length === 0) {
+      const markdown =
+        "# No posts found\n\nYour search didn't match any posts.";
+      return this.addPaymentNoticeIfNeeded(markdown, user);
+    }
+
+    // Get conversation IDs
+    const conversationIds = Array.from(
+      new Set(
+        conversationResults
+          .map((row) => row.conversation_id)
+          .filter((id) => id && id.trim() !== "")
+      )
+    );
+
+    if (conversationIds.length === 0) {
+      const markdown =
+        "# No valid conversations found\n\nThe matching posts don't have valid conversation IDs.";
+      return this.addPaymentNoticeIfNeeded(markdown, user);
+    }
+
+    // Fetch all posts for these conversations
+    const allPostsResult = this.sql
+      .exec<Post>(
+        `SELECT * FROM posts WHERE conversation_id IN (${conversationIds
+          .map((x) => `'${x}'`)
+          .join(",")})`
+      )
+      .toArray();
+
+    console.log(`Found ${allPostsResult.length} total posts in conversations`);
+
+    // Group posts by conversation and create threads
+    const conversationMap = new Map<string, Post[]>();
+
+    for (const post of allPostsResult) {
+      const conversationId = post.conversation_id || "unknown";
+      if (!conversationMap.has(conversationId)) {
+        conversationMap.set(conversationId, []);
+      }
+      conversationMap.get(conversationId)!.push(post);
+    }
+
+    // Convert to threads with token estimation
+    const threads: ConversationThread[] = [];
+    let totalTokens = 0;
+
+    for (const [conversationId, posts] of conversationMap) {
+      if (posts.length === 0) continue;
+
+      const thread: ConversationThread = {
+        conversationId,
+        posts,
+        tokenCount: 0,
+      };
+
+      // Estimate tokens for this thread
+      const markdown = this.convertThreadToMarkdown(thread);
+      thread.tokenCount = this.estimateTokens(markdown);
+
+      // Check if adding this thread would exceed token limit
+      if (totalTokens + thread.tokenCount <= maxTokens) {
+        threads.push(thread);
+        totalTokens += thread.tokenCount;
+      } else {
+        console.log(
+          `Stopping at thread ${conversationId} to stay within token limit`
+        );
+        break;
+      }
+    }
+
+    console.log(
+      `Selected ${threads.length} threads with ~${totalTokens} tokens`
+    );
+
+    // Sort threads by most recent post in each thread
+    threads.sort((a, b) => {
+      const latestA = Math.max(
+        ...a.posts.map((p) => new Date(p.created_at).getTime())
+      );
+      const latestB = Math.max(
+        ...b.posts.map((p) => new Date(p.created_at).getTime())
+      );
+      return latestB - latestA;
+    });
+
+    // Convert threads to markdown
+    let finalMarkdown = `# Search Results\n\n`;
+    finalMarkdown += `Query: \`${searchQuery.q || "all posts"}\`\n\n`;
+    finalMarkdown += `Found ${threads.length} conversation threads (estimated ${totalTokens} tokens)\n\n`;
+    finalMarkdown += `---\n\n`;
+
+    for (const thread of threads) {
+      finalMarkdown += this.convertThreadToMarkdown(thread);
+    }
+
+    return this.addPaymentNoticeIfNeeded(finalMarkdown, user);
+  }
+
+  async ensureUserExists(u: string): Promise<User | null> {
+    const data = await fetch(
+      `https://profile.grok-tools.com/${u}?secret=mysecret`
+    ).then((res) =>
+      res.json<{
+        id?: string;
+        userName?: string;
+        error?: string;
+        message?: string;
+      }>()
+    );
+
+    const { id, userName: username, error, message } = data;
+    if (!id || !username) {
+      console.error(`error ${error} ${message}`);
+      console.log({ data });
+      return null;
+    }
+
+    // Insert user if not exists
+    const existingUserResult = this.sql
+      .exec(`SELECT * FROM users WHERE id = ?`, id)
+      .toArray();
+
+    if (existingUserResult.length === 0) {
+      this.sql.exec(
+        `INSERT INTO users (id, username) VALUES (?, ?)`,
+        id,
+        username
+      );
+    }
+
+    // Get current user state
+    const userResult = this.sql
+      .exec<User>(`SELECT * FROM users WHERE id = ?`, id)
+      .toArray();
+
+    const user = userResult[0];
+
+    // Start sync if pending and has balance
+    if (user.scrape_status === "pending" && user.balance > 0) {
+      console.log(`Starting initial sync for user ${username}`);
+      this.sql.exec(
+        `UPDATE users SET scrape_status = 'in_progress', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        id
+      );
+
+      // Start sync
+      this.ctx.waitUntil(this.performSync(id, username));
+    }
+
+    return user;
+  }
+
+  async startSync(username: string): Promise<void> {
+    console.log(`Starting sync for user ${username}`);
+    const user = this.sql
+      .exec<User>(`SELECT * FROM users WHERE username = ?`, username)
+      .toArray()[0];
+
+    if (!user) {
+      console.log("Couldn't find user");
+      return;
+    }
+
+    this.sql.exec(
+      `UPDATE users SET scrape_status = 'in_progress', updated_at = CURRENT_TIMESTAMP WHERE username = ?`,
+      username
+    );
+
+    await this.performSync(user.id, user.username);
+  }
+
+  private shouldStartFrontfillSync(user: User): boolean {
+    if (user.balance <= 0 || user.scrape_status === "in_progress") {
+      return false;
+    }
+
+    // If synced_from is null or more than 24 hours ago
+    if (!user.synced_from) {
+      return true;
+    }
+
+    const syncedFromDate = new Date(user.synced_from);
+    const now = new Date();
+    const hoursSinceSync =
+      (now.getTime() - syncedFromDate.getTime()) / (1000 * 60 * 60);
+
+    return hoursSinceSync > SYNC_OVERLAP_HOURS;
+  }
+
+  private async performSync(userId: string, username: string): Promise<void> {
+    try {
+      console.log(`Performing sync for user ${username} (${userId})`);
+
+      // Get current user state
+      const userResult = this.sql
+        .exec<User>(`SELECT * FROM users WHERE id = ?`, userId)
+        .toArray();
+
+      if (userResult.length === 0) {
+        console.error(`User ${userId} not found`);
+        return;
+      }
+
+      const user = userResult[0];
+
+      // Check if user has sufficient balance
+      if (user.balance <= 0) {
+        console.log(`User ${username} has no balance, stopping sync`);
+        this.sql.exec(
+          `UPDATE users SET scrape_status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          userId
+        );
+        return;
+      }
+
+      // Determine sync type and direction
+      const syncType = this.determineSyncType(user);
+      console.log(`Sync type for ${username}: ${syncType}`);
+
+      if (syncType === "historic") {
+        await this.performHistoricSync(user);
+      } else if (syncType === "frontfill") {
+        await this.performFrontfillSync(user);
+      } else {
+        console.log(`No sync needed for ${username}`);
+        this.sql.exec(
+          `UPDATE users SET scrape_status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          userId
+        );
+      }
+    } catch (error) {
+      console.error(`Sync failed for user ${username}:`, error);
+      this.sql.exec(
+        `UPDATE users SET scrape_status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        userId
+      );
+    }
+  }
+
+  private determineSyncType(user: User): "historic" | "frontfill" | "none" {
+    // If history is not completed and we haven't reached the limit, do historic sync
+    if (
+      !user.history_is_completed &&
+      user.history_count < user.history_max_count
+    ) {
+      return "historic";
+    }
+
+    // If synced_from is null or more than 24 hours ago, do frontfill
+    if (!user.synced_from) {
+      return "frontfill";
+    }
+
+    const syncedFromDate = new Date(user.synced_from);
+    const now = new Date();
+    const hoursSinceSync =
+      (now.getTime() - syncedFromDate.getTime()) / (1000 * 60 * 60);
+
+    if (hoursSinceSync > SYNC_OVERLAP_HOURS) {
+      return "frontfill";
+    }
+
+    return "none";
+  }
+
+  private async performHistoricSync(user: User): Promise<void> {
+    console.log(`Performing historic sync for ${user.username}`);
+
+    // Fetch posts going backwards from cursor
+    const postsResponse = await this.fetchUserPosts(
+      user.username,
+      user.history_cursor
+    );
+
+    if (
+      postsResponse.msg !== "success" ||
+      !postsResponse.data?.tweets?.length
+    ) {
+      console.log(
+        `No more historic posts found for ${user.username} (history_is_completed=1)`
+      );
+      // Mark history as completed
+      this.sql.exec(
+        `UPDATE users SET 
+          history_is_completed = 1, 
+          history_cursor = NULL,
+          scrape_status = 'completed',
+          updated_at = CURRENT_TIMESTAMP 
+         WHERE id = ?`,
+        user.id
+      );
+      return;
+    }
+
+    const tweets = postsResponse.data.tweets;
+    console.log(`Found ${tweets.length} historic tweets for ${user.username}`);
+
+    // Process tweets and count historic posts
+    let historicPostsAdded = 0;
+    const tweetProcessingPromises = tweets.map(async (tweet) => {
+      let postsProcessed = 0;
+
+      try {
+        // Store the main tweet as historic
+        await this.storePost(user.id, tweet, true);
+        postsProcessed++;
+
+        // Get thread context for this tweet
+        try {
+          const threadResponse = await this.fetchThreadContext(tweet.id);
+
+          if (
+            threadResponse.status === "success" &&
+            threadResponse.tweets?.length
+          ) {
+            await Promise.all(
+              threadResponse.tweets.map(async (reply) => {
+                await this.storePost(user.id, reply, true);
+                return 1;
+              })
+            );
+            postsProcessed += threadResponse.tweets.length;
+          }
+        } catch (error) {
+          console.error(`Failed to fetch thread for tweet ${tweet.id}:`, error);
+        }
+
+        return postsProcessed;
+      } catch (error) {
+        console.error(`Failed to process tweet ${tweet.id}:`, error);
+        return 0;
+      }
+    });
+
+    const processingResults = await Promise.all(tweetProcessingPromises);
+    const totalPostsProcessed = processingResults.reduce(
+      (sum, count) => sum + count,
+      0
+    );
+
+    // Calculate cost and deduct from balance
+    const cost = Math.ceil(totalPostsProcessed * SYNC_COST_PER_POST * 100);
+    const newBalance = Math.max(0, user.balance - cost);
+    const newHistoryCount = user.history_count + totalPostsProcessed;
+
+    console.log(
+      `Historic sync: processed ${totalPostsProcessed} posts, cost: $${
+        cost / 100
+      }, new count: ${newHistoryCount}/${user.history_max_count}`
+    );
+
+    // Update user record
+    const oldestTweet = tweets[tweets.length - 1];
+
+    this.sql.exec(
+      `UPDATE users SET 
+        balance = ?, 
+        history_count = ?,
+        history_cursor = ?,
+        updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      newBalance,
+      newHistoryCount,
+      postsResponse.next_cursor || oldestTweet.id,
+      user.id
+    );
+
+    // Check if we should continue historic sync
+    const shouldContinue =
+      newBalance > 0 &&
+      newHistoryCount < user.history_max_count &&
+      postsResponse.has_next_page;
+
+    if (shouldContinue) {
+      console.log(`Scheduling next historic sync for ${user.username}`);
+      await this.ctx.storage.setAlarm(Date.now() + 1000);
+    } else {
+      console.log(
+        `Historic sync completed (stopped, not done) for ${user.username}`
+      );
+      this.sql.exec(
+        `UPDATE users SET 
+          scrape_status = 'completed',
+          updated_at = CURRENT_TIMESTAMP 
+         WHERE id = ?`,
+        user.id
+      );
+    }
+  }
+
+  private async performFrontfillSync(user: User): Promise<void> {
+    console.log(`Performing frontfill sync for ${user.username}`);
+
+    // Set synced_until to current time if not set
+    if (!user.synced_until) {
+      const now = new Date().toISOString();
+      this.sql.exec(
+        `UPDATE users SET synced_until = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        now,
+        user.id
+      );
+      user.synced_until = now;
+    }
+
+    // Fetch recent posts (no cursor = get latest)
+    const postsResponse = await this.fetchUserPosts(
+      user.username,
+      user.synced_from_cursor
+    );
+
+    if (
+      postsResponse.msg !== "success" ||
+      !postsResponse.data?.tweets?.length
+    ) {
+      console.log(`No new posts found for frontfill sync for ${user.username}`);
+      this.sql.exec(
+        `UPDATE users SET scrape_status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        user.id
+      );
+      return;
+    }
+
+    const tweets = postsResponse.data.tweets;
+    console.log(`Found ${tweets.length} frontfill tweets for ${user.username}`);
+
+    // Process tweets as non-historic
+    const tweetProcessingPromises = tweets.map(async (tweet) => {
+      let postsProcessed = 0;
+
+      try {
+        await this.storePost(user.id, tweet, false);
+        postsProcessed++;
+
+        try {
+          const threadResponse = await this.fetchThreadContext(tweet.id);
+
+          if (
+            threadResponse.status === "success" &&
+            threadResponse.tweets?.length
+          ) {
+            await Promise.all(
+              threadResponse.tweets.map(async (reply) => {
+                await this.storePost(user.id, reply, false);
+                return 1;
+              })
+            );
+            postsProcessed += threadResponse.tweets.length;
+          }
+        } catch (error) {
+          console.error(`Failed to fetch thread for tweet ${tweet.id}:`, error);
+        }
+
+        return postsProcessed;
+      } catch (error) {
+        console.error(`Failed to process tweet ${tweet.id}:`, error);
+        return 0;
+      }
+    });
+
+    const processingResults = await Promise.all(tweetProcessingPromises);
+    const totalPostsProcessed = processingResults.reduce(
+      (sum, count) => sum + count,
+      0
+    );
+
+    // Calculate cost and deduct from balance
+    const cost = Math.ceil(totalPostsProcessed * SYNC_COST_PER_POST * 100);
+    const newBalance = Math.max(0, user.balance - cost);
+
+    console.log(
+      `Frontfill sync: processed ${totalPostsProcessed} posts, cost: $${
+        cost / 100
+      }`
+    );
+
+    // Update synced_from to the newest tweet's date
+    const newestTweet = tweets[0];
+    const oldestTweet = tweets[tweets.length - 1];
+
+    // Check if we've reached the overlap point
+    const syncedUntilDate = new Date(user.synced_until);
+    const overlapDate = new Date(
+      syncedUntilDate.getTime() - SYNC_OVERLAP_HOURS * 60 * 60 * 1000
+    );
+    const oldestTweetDate = new Date(oldestTweet.createdAt);
+
+    if (oldestTweetDate <= overlapDate) {
+      // We've reached the overlap, update synced_from to synced_until
+      this.sql.exec(
+        `UPDATE users SET 
+          balance = ?,
+          synced_from = synced_until,
+          synced_from_cursor = NULL,
+          scrape_status = 'completed',
+          updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        newBalance,
+        user.id
+      );
+      console.log(
+        `Frontfill sync completed (reached overlap) for ${user.username}`
+      );
+    } else {
+      // Continue frontfill sync
+      this.sql.exec(
+        `UPDATE users SET 
+          balance = ?,
+          synced_from_cursor = ?,
+          updated_at = CURRENT_TIMESTAMP
+         WHERE id = ?`,
+        newBalance,
+        postsResponse.next_cursor || oldestTweet.id,
+        user.id
+      );
+
+      // Check if we should continue
+      if (newBalance > 0 && postsResponse.has_next_page) {
+        console.log(`Scheduling next frontfill sync for ${user.username}`);
+        await this.ctx.storage.setAlarm(Date.now() + 1000);
+      } else {
+        console.log(
+          `Frontfill sync completed (no balance/pages) for ${user.username}`
+        );
+        this.sql.exec(
+          `UPDATE users SET scrape_status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+          user.id
+        );
+      }
+    }
+  }
+
+  private async fetchUserPosts(
+    username: string,
+    cursor?: string | null
+  ): Promise<TwitterAPIResponse> {
+    let url = `https://api.twitterapi.io/twitter/user/last_tweets?userName=${username}&includeReplies=true`;
+
+    if (cursor) {
+      url += `&cursor=${cursor}`;
+    }
+
+    console.log(`Fetching user posts from: ${url}`);
+
+    const response = await fetch(url, {
+      headers: {
+        "X-API-Key": this.env.X_API_KEY,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        `Failed to fetch posts: ${response.status} ${response.statusText}`,
+        errorText
+      );
+      throw new Error(
+        `Failed to fetch posts: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data = (await response.json()) as TwitterAPIResponse;
+    return data;
+  }
+
+  private async fetchThreadContext(
+    tweetId: string,
+    cursor?: string
+  ): Promise<ThreadContextResponse> {
+    const baseUrl = `https://api.twitterapi.io/twitter/tweet/thread_context?tweetId=${tweetId}`;
+    const url = cursor ? `${baseUrl}&cursor=${cursor}` : baseUrl;
+
+    const response = await fetch(url, {
+      headers: {
+        "X-API-Key": this.env.X_API_KEY,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(
+        `Failed to fetch thread: ${response.status} ${response.statusText}`,
+        errorText
+      );
+      throw new Error(
+        `Failed to fetch thread: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data = (await response.json()) as ThreadContextResponse;
+
+    // If there are more pages, recursively fetch them
+    if (data.has_next_page && data.next_cursor) {
+      try {
+        const nextPageData = await this.fetchThreadContext(
+          tweetId,
+          data.next_cursor
+        );
+
+        return {
+          ...data,
+          tweets: [...(data.tweets || []), ...(nextPageData.tweets || [])],
+          has_next_page: nextPageData.has_next_page,
+          next_cursor: nextPageData.next_cursor,
+        };
+      } catch (error) {
+        console.error(
+          `Failed to fetch next page for thread ${tweetId}:`,
+          error
+        );
+        return data;
+      }
+    }
+
+    return data;
+  }
+
+  private formatTweetText(tweet: Tweet): string {
+    let tweetText = tweet.text || "";
+
+    // Expand URLs in the tweet text
+    if (tweet.entities?.urls && tweet.entities.urls.length > 0) {
+      for (const urlEntity of tweet.entities.urls) {
+        tweetText = tweetText.replace(urlEntity.url, urlEntity.expanded_url);
+      }
+    }
+
+    // Remove media URLs from text to avoid duplication since we'll store them separately
+    if (
+      tweet.extendedEntities?.media &&
+      tweet.extendedEntities.media.length > 0
+    ) {
+      for (const media of tweet.extendedEntities.media) {
+        tweetText = tweetText.replace(media.url, "");
+      }
+    }
+
+    return tweetText.trim();
+  }
+
+  private extractMediaUrls(tweet: Tweet): string {
+    const mediaItems: string[] = [];
+
+    if (
+      tweet.extendedEntities?.media &&
+      tweet.extendedEntities.media.length > 0
+    ) {
+      const uniqueMedia = new Set(
+        tweet.extendedEntities.media
+          .map((media) => {
+            // For photos, just include the URL
+            if (media.type === "photo") {
+              return `[Image: ${media.media_url_https}]`;
+            }
+            // For videos and GIFs, include both the thumbnail and video URL if available
+            else if (media.type === "video" || media.type === "animated_gif") {
+              const videoUrl = media.video_info?.variants?.[0]?.url || "";
+              if (videoUrl) {
+                return `[Video: ${videoUrl}]`;
+              } else {
+                return `[Video: ${media.media_url_https}]`;
+              }
+            }
+            return "";
+          })
+          .filter((item) => item.length > 0)
+      );
+
+      mediaItems.push(...Array.from(uniqueMedia));
+    }
+
+    return mediaItems.join("\n");
+  }
+
+  private formatAuthorBio(author: UserInfo): string {
+    let bio = author.description || "";
+
+    // Expand URLs in bio
+    if (
+      author.entities?.description?.urls &&
+      author.entities.description.urls.length > 0
+    ) {
+      for (const urlEntity of author.entities.description.urls) {
+        bio = bio.replace(urlEntity.url, urlEntity.expanded_url);
+      }
+    }
+
+    return bio;
+  }
+
+  private getAuthorUrl(author: UserInfo): string {
+    // Check if there's a URL in the author's entities
+    if (author.entities?.url?.urls && author.entities.url.urls.length > 0) {
+      return author.entities.url.urls[0].expanded_url;
+    }
+    return "";
+  }
+
+  private getProfileImageUrl(profilePicture: string): string {
+    // Replace _normal with _400x400 for higher resolution
+    return profilePicture.replace(/_normal\./, "_400x400.");
+  }
+
+  private async storePost(
+    userId: string,
+    tweet: Tweet,
+    isHistoric: boolean = false
+  ): Promise<void> {
+    try {
+      const formattedText = this.formatTweetText(tweet);
+      const mediaUrls = this.extractMediaUrls(tweet);
+      const fullTextWithMedia = mediaUrls
+        ? `${formattedText}\n${mediaUrls}`
+        : formattedText;
+
+      const authorBio = this.formatAuthorBio(tweet.author);
+      const authorUrl = this.getAuthorUrl(tweet.author);
+      const authorProfileImage = tweet.author.profilePicture
+        ? this.getProfileImageUrl(tweet.author.profilePicture)
+        : "";
+
+      this.sql.exec(
+        `INSERT OR REPLACE INTO posts (
+        user_id, tweet_id, text, author_username, author_name,
+        created_at, like_count, retweet_count, reply_count,
+        is_reply, conversation_id, raw_data,
+        author_profile_image_url, author_bio, author_location,
+        author_url, author_verified, bookmark_count, view_count, is_historic
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        userId,
+        tweet.id,
+        fullTextWithMedia,
+        tweet.author?.userName || "",
+        tweet.author?.name || "",
+        tweet.createdAt ? new Date(tweet.createdAt).toISOString() : "",
+        tweet.likeCount || 0,
+        tweet.retweetCount || 0,
+        tweet.replyCount || 0,
+        tweet.isReply ? 1 : 0,
+        tweet.conversationId || "",
+        JSON.stringify(tweet),
+        authorProfileImage,
+        authorBio,
+        tweet.author?.location || "",
+        authorUrl,
+        tweet.author?.isBlueVerified ? 1 : 0,
+        tweet.bookmarkCount || 0,
+        tweet.viewCount || 0,
+        isHistoric ? 1 : 0
+      );
+    } catch (error) {
+      console.error(`Failed to store post ${tweet.id}:`, error);
+    }
+  }
+
+  async getUserStats(authUser: UserContext["user"]): Promise<UserStats | null> {
+    const user = await this.ensureUserExists(authUser?.username);
+    console.log({ user });
+    if (!user) {
+      return null;
+    }
+    const postCountResult = this.sql
+      .exec(
+        `SELECT COUNT(*) as count FROM posts WHERE user_id = ?`,
+        authUser.id
+      )
+      .toArray()[0] as { count: number };
+
+    return {
+      postCount: postCountResult.count,
+      balance: user.balance,
+      isPremium: Boolean(user.is_premium),
+      isPublic: Boolean(user.is_public),
+      isFeatured: Boolean(user.is_featured),
+      scrapeStatus: user.scrape_status as
+        | "pending"
+        | "in_progress"
+        | "completed"
+        | "failed",
+      historyMaxCount: user.history_max_count,
+      historyCount: user.history_count,
+      historyIsCompleted: Boolean(user.history_is_completed),
+      syncedFrom: user.synced_from,
+      syncedUntil: user.synced_until,
+    };
+  }
+}
+
+// In the statsPage function, modify the CSS styles section:
 
 const statsPage = (username: string, stats: AuthorStats[]) => `<!DOCTYPE html>
 <html lang="en" class="bg-amber-50">
@@ -304,9 +1502,12 @@ const statsPage = (username: string, stats: AuthorStats[]) => `<!DOCTYPE html>
             padding: 1rem;
             transition: all 0.2s ease;
             cursor: pointer;
-            display: block;
+            display: flex;
+            flex-direction: column;
             text-decoration: none;
             color: inherit;
+            height: 100%; /* Make all cards same height */
+            min-height: 200px; /* Set minimum height */
         }
 
         .author-card:hover {
@@ -321,6 +1522,25 @@ const statsPage = (username: string, stats: AuthorStats[]) => `<!DOCTYPE html>
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
             gap: 1rem;
+        }
+
+        .bio-text {
+            display: -webkit-box;
+            -webkit-line-clamp: 3; /* Limit to 3 lines */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.4;
+            max-height: 4.2em; /* 3 lines × 1.4 line-height */
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .author-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         @media (max-width: 640px) {
@@ -361,37 +1581,47 @@ const statsPage = (username: string, stats: AuthorStats[]) => `<!DOCTYPE html>
                         <a href="/${username}?q=from:${encodeURIComponent(
                           author.username
                         )}" class="author-card">
-                            <div class="flex items-start gap-3">
-                                <div class="text-lg font-bold text-amber-700 w-6 flex-shrink-0">#${
-                                  index + 1
-                                }</div>
-                                <div class="flex-shrink-0">
-                                    ${
-                                      author.profileImageUrl
-                                        ? `<img src="${author.profileImageUrl}" alt="${author.name}" class="w-12 h-12 rounded-full border-2 border-amber-700">`
-                                        : `<div class="w-12 h-12 rounded-full bg-amber-200 border-2 border-amber-700 flex items-center justify-center">
-                                            <span class="text-amber-700 font-bold">${author.name
-                                              .charAt(0)
-                                              .toUpperCase()}</span>
-                                        </div>`
-                                    }
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <h4 class="font-semibold text-amber-800 truncate">${
-                                          author.name
-                                        }</h4>
+                            <div class="author-content">
+                                <div class="flex items-start gap-3 mb-3">
+                                    <div class="text-lg font-bold text-amber-700 w-6 flex-shrink-0">#${
+                                      index + 1
+                                    }</div>
+                                    <div class="flex-shrink-0">
                                         ${
-                                          author.isVerified
-                                            ? '<span class="text-blue-500 flex-shrink-0">✓</span>'
-                                            : ""
+                                          author.profileImageUrl
+                                            ? `<img src="${author.profileImageUrl}" alt="${author.name}" class="w-12 h-12 rounded-full border-2 border-amber-700">`
+                                            : `<div class="w-12 h-12 rounded-full bg-amber-200 border-2 border-amber-700 flex items-center justify-center">
+                                                <span class="text-amber-700 font-bold">${author.name
+                                                  .charAt(0)
+                                                  .toUpperCase()}</span>
+                                            </div>`
                                         }
                                     </div>
-                                    <p class="text-amber-600 text-sm truncate">@${
-                                      author.username
-                                    }</p>
-                                    
-                                    <div class="flex items-center justify-between mt-3">
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <h4 class="font-semibold text-amber-800 truncate">${
+                                              author.name
+                                            }</h4>
+                                            ${
+                                              author.isVerified
+                                                ? '<span class="text-blue-500 flex-shrink-0">✓</span>'
+                                                : ""
+                                            }
+                                        </div>
+                                        <p class="text-amber-600 text-sm truncate">@${
+                                          author.username
+                                        }</p>
+                                    </div>
+                                </div>
+                                
+                                ${
+                                  author.bio
+                                    ? `<p class="text-xs text-amber-700 mb-3 bio-text">${author.bio}</p>`
+                                    : '<div class="mb-3"></div>'
+                                }
+                                
+                                <div class="mt-auto">
+                                    <div class="flex items-center justify-between mb-2">
                                         <div class="text-right">
                                             <div class="text-xl font-bold text-amber-700">${author.postCount.toLocaleString()}</div>
                                             <div class="text-xs text-amber-600">posts</div>
@@ -410,19 +1640,8 @@ const statsPage = (username: string, stats: AuthorStats[]) => `<!DOCTYPE html>
                                     </div>
                                     
                                     ${
-                                      author.bio
-                                        ? `<p class="text-xs text-amber-700 mt-2 line-clamp-2">${
-                                            author.bio.length > 80
-                                              ? author.bio.substring(0, 80) +
-                                                "..."
-                                              : author.bio
-                                          }</p>`
-                                        : ""
-                                    }
-                                    
-                                    ${
                                       author.location
-                                        ? `<p class="text-xs text-amber-600 mt-1 truncate">📍 ${author.location}</p>`
+                                        ? `<p class="text-xs text-amber-600 truncate">📍 ${author.location}</p>`
                                         : ""
                                     }
                                 </div>
@@ -553,7 +1772,7 @@ const dashboardPage = (
                 
                 <div class="text-amber-700">
                     ${
-                      stats.syncComplete
+                      stats.historyIsCompleted && stats.syncedFrom
                         ? "Your X content is fully synchronized and ready for AI analysis."
                         : stats.scrapeStatus === "in_progress"
                         ? "Synchronizing your X content... This may take a while."
@@ -567,14 +1786,14 @@ const dashboardPage = (
                     ? `<div class="text-sm text-amber-600 mt-2">
                         ${
                           stats.syncedFrom
-                            ? `<div>Synced from: ${new Date(
+                            ? `<div>Latest sync: ${new Date(
                                 stats.syncedFrom
                               ).toLocaleDateString()}</div>`
                             : ""
                         }
                         ${
-                          stats.syncedUntil
-                            ? `<div>Synced until: ${new Date(
+                          stats.syncedUntil && !stats.syncedFrom
+                            ? `<div>Syncing until: ${new Date(
                                 stats.syncedUntil
                               ).toLocaleDateString()}</div>`
                             : ""
@@ -592,7 +1811,13 @@ const dashboardPage = (
                         <div class="text-2xl font-bold text-amber-700">${
                           stats.postCount
                         }</div>
-                        <div class="text-sm text-amber-600">Posts Synced</div>
+                        <div class="text-sm text-amber-600">Total Posts</div>
+                    </div>
+                    <div>
+                        <div class="text-2xl font-bold text-amber-700">${
+                          stats.historyCount
+                        }/${stats.historyMaxCount}</div>
+                        <div class="text-sm text-amber-600">Historic Posts</div>
                     </div>
                     <div>
                         <div class="text-2xl font-bold text-amber-700">$${(
@@ -602,7 +1827,7 @@ const dashboardPage = (
                     </div>
                     <div>
                         <div class="text-2xl font-bold text-amber-700">${
-                          stats.syncComplete
+                          stats.historyIsCompleted && stats.syncedFrom
                             ? "Complete"
                             : stats.scrapeStatus === "in_progress"
                             ? "Syncing"
@@ -611,12 +1836,6 @@ const dashboardPage = (
                             : "Ready"
                         }</div>
                         <div class="text-sm text-amber-600">Status</div>
-                    </div>
-                    <div>
-                        <div class="text-2xl font-bold text-amber-700">${
-                          stats.isPublic ? "Public" : "Private"
-                        }</div>
-                        <div class="text-sm text-amber-600">Visibility</div>
                     </div>
                 </div>
             </div>
@@ -653,7 +1872,6 @@ const dashboardPage = (
             <div class="papyrus-card p-6 mb-6">
                 <h3 class="text-lg font-semibold mb-4 text-amber-800">Actions</h3>
                 <div class="grid md:grid-cols-2 gap-3">
-                    <a href="/admin" target="_blank" class="papyrus-button block text-center">Admin Panel</a>
                     <a href="/pricing" class="papyrus-button block text-center">Pricing</a>
                     <span onclick="window.location.href='/${
                       user.username
@@ -688,940 +1906,6 @@ const dashboardPage = (
 </body>
 </html>`;
 
-@Queryable()
-export class UserDO extends DurableObject<Env> {
-  public sql: SqlStorage;
-  public try: SqlStorage["exec"];
-  constructor(state: DurableObjectState, env: Env) {
-    super(state, env);
-    this.sql = state.storage.sql;
-    this.try = (query: string, ...params) => {
-      try {
-        return this.sql.exec(query, ...params);
-      } catch {}
-    };
-
-    this.env = env;
-    this.initializeTables();
-  }
-
-  private initializeTables() {
-    // Create users table
-    this.sql.exec(`
-    CREATE TABLE IF NOT EXISTS users (
-      id TEXT PRIMARY KEY,
-      username TEXT UNIQUE NOT NULL,
-      is_public INTEGER DEFAULT 0,
-      is_premium INTEGER DEFAULT 0,
-      balance INTEGER DEFAULT 0,
-      initialized INTEGER DEFAULT 0,
-      scrape_status TEXT DEFAULT 'pending',
-      synced_from TEXT,
-      synced_from_cursor TEXT,
-      synced_until TEXT,
-      is_sync_complete INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-
-    // Create posts table with new columns
-    this.sql.exec(`
-    CREATE TABLE IF NOT EXISTS posts (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id TEXT NOT NULL,
-      tweet_id TEXT UNIQUE NOT NULL,
-      text TEXT,
-      author_username TEXT,
-      author_name TEXT,
-      created_at TEXT,
-      like_count INTEGER DEFAULT 0,
-      retweet_count INTEGER DEFAULT 0,
-      reply_count INTEGER DEFAULT 0,
-      is_reply INTEGER DEFAULT 0,
-      conversation_id TEXT,
-      raw_data TEXT,
-      author_profile_image_url TEXT,
-      author_bio TEXT,
-      author_location TEXT,
-      author_url TEXT,
-      author_verified INTEGER DEFAULT 0,
-      bookmark_count INTEGER DEFAULT 0,
-      view_count INTEGER DEFAULT 0,
-      FOREIGN KEY (user_id) REFERENCES users (id)
-    )
-  `);
-
-    // Add existing column migrations
-    this.try(`ALTER TABLE users ADD COLUMN is_public INTEGER DEFAULT 0`);
-    this.try(`ALTER TABLE users ADD COLUMN is_featured INTEGER DEFAULT 0`);
-    this.try(`ALTER TABLE users ADD COLUMN synced_from TEXT`);
-    this.try(`ALTER TABLE users ADD COLUMN synced_from_cursor TEXT`);
-    this.try(`ALTER TABLE users ADD COLUMN synced_until TEXT`);
-    this.try(`ALTER TABLE users ADD COLUMN is_sync_complete INTEGER DEFAULT 0`);
-
-    // Add new column migrations for posts table
-    this.try(`ALTER TABLE posts ADD COLUMN author_profile_image_url TEXT`);
-    this.try(`ALTER TABLE posts ADD COLUMN author_bio TEXT`);
-    this.try(`ALTER TABLE posts ADD COLUMN author_location TEXT`);
-    this.try(`ALTER TABLE posts ADD COLUMN author_url TEXT`);
-    this.try(`ALTER TABLE posts ADD COLUMN author_verified INTEGER DEFAULT 0`);
-    this.try(`ALTER TABLE posts ADD COLUMN bookmark_count INTEGER DEFAULT 0`);
-    this.try(`ALTER TABLE posts ADD COLUMN view_count INTEGER DEFAULT 0`);
-    this.try(
-      `CREATE INDEX IF NOT EXISTS idx_posts_author_created ON posts (author_username, created_at DESC)`
-    );
-
-    // Create indexes
-    this.sql.exec(
-      `CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts (user_id)`
-    );
-    this.sql.exec(
-      `CREATE INDEX IF NOT EXISTS idx_posts_tweet_id ON posts (tweet_id)`
-    );
-    this.sql.exec(
-      `CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts (created_at)`
-    );
-  }
-
-  async alarm(): Promise<void> {
-    console.log("Alarm triggered - continuing sync");
-
-    // Get user from database
-    const user = this.sql
-      .exec<User>(`SELECT * FROM users LIMIT 1`)
-      .toArray()[0];
-    if (!user) {
-      console.log("No user found for alarm");
-      return;
-    }
-
-    await this.performSync(user.id, user.username);
-  }
-
-  private parseSearchQuery(query: string): ParsedQuery {
-    const parsed: ParsedQuery = {
-      keywords: [],
-      operators: [],
-    };
-
-    if (!query) return parsed;
-
-    // Extract from: parameter
-    const fromMatch = query.match(/from:(\w+)/i);
-    if (fromMatch) {
-      parsed.from = fromMatch[1];
-      query = query.replace(/from:\w+/gi, "").trim();
-    }
-
-    // Extract before: parameter
-    const beforeMatch = query.match(/before:(\d{4}-\d{2}-\d{2})/i);
-    if (beforeMatch) {
-      parsed.before = new Date(beforeMatch[1]);
-      query = query.replace(/before:\d{4}-\d{2}-\d{2}/gi, "").trim();
-    }
-
-    // Extract after: parameter
-    const afterMatch = query.match(/after:(\d{4}-\d{2}-\d{2})/i);
-    if (afterMatch) {
-      parsed.after = new Date(afterMatch[1]);
-      query = query.replace(/after:\d{4}-\d{2}-\d{2}/gi, "").trim();
-    }
-
-    // Extract AND/OR operators and remaining keywords
-    const tokens = query.split(/\s+/).filter((token) => token.length > 0);
-
-    for (const token of tokens) {
-      if (token.toUpperCase() === "AND" || token.toUpperCase() === "OR") {
-        parsed.operators.push(token.toUpperCase() as "AND" | "OR");
-      } else if (token.length > 0) {
-        parsed.keywords.push(token.toLowerCase());
-      }
-    }
-
-    return parsed;
-  }
-
-  private buildSearchSql(parsedQuery: ParsedQuery): {
-    sql: string;
-    params: any[];
-  } {
-    let sql = `SELECT DISTINCT conversation_id FROM posts WHERE 1=1`;
-    const params: any[] = [];
-
-    // Add from filter
-    if (parsedQuery.from) {
-      sql += ` AND LOWER(author_username) = LOWER(?)`;
-      params.push(parsedQuery.from);
-    }
-
-    // Add date filters
-    if (parsedQuery.before) {
-      sql += ` AND date(created_at) < ?`;
-      params.push(parsedQuery.before.toISOString().split("T")[0]);
-    }
-
-    if (parsedQuery.after) {
-      sql += ` AND date(created_at) > ?`;
-      params.push(parsedQuery.after.toISOString().split("T")[0]);
-    }
-
-    // Add keyword filters
-    if (parsedQuery.keywords.length > 0) {
-      const keywordConditions: string[] = [];
-
-      for (const keyword of parsedQuery.keywords) {
-        keywordConditions.push(`LOWER(text) LIKE ?`);
-        params.push(`%${keyword}%`);
-      }
-
-      if (keywordConditions.length > 0) {
-        // Default to AND if no operators specified, otherwise use the operators
-        const operator =
-          parsedQuery.operators.length > 0
-            ? parsedQuery.operators[0] === "OR"
-              ? " OR "
-              : " AND "
-            : " AND ";
-
-        sql += ` AND (${keywordConditions.join(operator)})`;
-      }
-    }
-
-    return { sql, params };
-  }
-
-  private estimateTokens(text: string): number {
-    return Math.ceil(text.length / 5);
-  }
-
-  async getAuthorStats(
-    requestingUserId: string | undefined,
-    limit?: number
-  ): Promise<AuthorStats[]> {
-    const user = this.sql.exec<User>(`SELECT * FROM users`).toArray()[0];
-
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    if (!user.is_public && requestingUserId !== user.id) {
-      throw new Error("User did not make posts public");
-    }
-
-    // Get author stats with most recent post data for each author
-    const authorStatsResult = this.sql
-      .exec<{
-        author_username: string;
-        author_name: string;
-        post_count: number;
-        author_profile_image_url: string;
-        author_bio: string;
-        author_location: string;
-        author_url: string;
-        author_verified: number;
-        latest_post_date: string;
-      }>(
-        `
-    WITH author_post_counts AS (
-      SELECT 
-        author_username,
-        COUNT(*) as post_count
-      FROM posts 
-      GROUP BY author_username
-    ),
-    latest_author_posts AS (
-      SELECT DISTINCT
-        author_username,
-        FIRST_VALUE(author_name) OVER (PARTITION BY author_username ORDER BY created_at DESC) as author_name,
-        FIRST_VALUE(author_profile_image_url) OVER (PARTITION BY author_username ORDER BY created_at DESC) as author_profile_image_url,
-        FIRST_VALUE(author_bio) OVER (PARTITION BY author_username ORDER BY created_at DESC) as author_bio,
-        FIRST_VALUE(author_location) OVER (PARTITION BY author_username ORDER BY created_at DESC) as author_location,
-        FIRST_VALUE(author_url) OVER (PARTITION BY author_username ORDER BY created_at DESC) as author_url,
-        FIRST_VALUE(author_verified) OVER (PARTITION BY author_username ORDER BY created_at DESC) as author_verified,
-        FIRST_VALUE(created_at) OVER (PARTITION BY author_username ORDER BY created_at DESC) as latest_post_date
-      FROM posts
-    )
-    SELECT 
-      apc.author_username,
-      lap.author_name,
-      apc.post_count,
-      lap.author_profile_image_url,
-      lap.author_bio,
-      lap.author_location,
-      lap.author_url,
-      lap.author_verified,
-      lap.latest_post_date
-    FROM author_post_counts apc
-    JOIN latest_author_posts lap ON apc.author_username = lap.author_username
-    ORDER BY apc.post_count DESC
-  `
-      )
-      .toArray();
-
-    const mapped = authorStatsResult
-      .map((row) => ({
-        username: row.author_username,
-        name: row.author_name || row.author_username,
-        postCount: row.post_count,
-        profileImageUrl: row.author_profile_image_url || "",
-        bio: row.author_bio || "",
-        location: row.author_location || "",
-        url: row.author_url || "",
-        isVerified: Boolean(row.author_verified),
-        latestPostDate: row.latest_post_date,
-      }))
-      .filter((row) => row.username !== user.username);
-
-    return limit ? mapped.slice(0, limit) : mapped;
-  }
-  private convertThreadToMarkdown(thread: ConversationThread): string {
-    const sortedPosts = thread.posts.sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    );
-
-    let markdown = `# Thread\n\n`;
-
-    for (const post of sortedPosts) {
-      const date = new Date(post.created_at).toISOString().slice(0, 10);
-      const isReply = post.is_reply ? "\t↳" : "";
-
-      markdown += `${isReply}@${post.author_username} [${
-        post.tweet_id
-      }] (${date} ${post.like_count > 0 ? `❤️ ${post.like_count}` : ""}${
-        post.retweet_count > 0 ? ` 🔄 ${post.retweet_count}` : ""
-      }) - ${post.text.replaceAll("\n", "\t")}\n`;
-    }
-
-    return markdown + "\n\n";
-  }
-
-  async searchPosts(
-    userId: string | undefined,
-    searchQuery: PostSearchQuery
-  ): Promise<string> {
-    const user = this.sql.exec<User>(`SELECT * FROM users`).toArray()[0];
-
-    if (!user) {
-      return `User not found`;
-    }
-
-    if (!user.is_public && userId !== user.id) {
-      return `User did not make posts public`;
-    }
-
-    const maxTokens = searchQuery.maxTokens || 10000;
-    const parsedQuery = this.parseSearchQuery(searchQuery.q || "");
-
-    console.log("Parsed query:", parsedQuery);
-
-    // First, find matching conversation IDs
-    const { sql: searchSql, params: searchParams } =
-      this.buildSearchSql(parsedQuery);
-
-    console.log("Search SQL:", searchSql, "Params:", searchParams);
-
-    const conversationResults = this.sql
-      .exec<{ conversation_id: string }>(searchSql, ...searchParams)
-      .toArray();
-
-    if (conversationResults.length === 0) {
-      return "# No posts found\n\nYour search didn't match any posts.";
-    }
-
-    // Get conversation IDs
-    const conversationIds = Array.from(
-      new Set(
-        conversationResults
-          .map((row) => row.conversation_id)
-          .filter((id) => id && id.trim() !== "")
-      )
-    );
-
-    if (conversationIds.length === 0) {
-      return "# No valid conversations found\n\nThe matching posts don't have valid conversation IDs.";
-    }
-
-    // Fetch all posts for these conversations
-    const allPostsResult = this.sql
-      .exec<Post>(
-        `SELECT * FROM posts WHERE conversation_id IN (${conversationIds
-          .map((x) => `'${x}'`)
-          .join(",")})`
-      )
-      .toArray();
-
-    console.log(`Found ${allPostsResult.length} total posts in conversations`);
-
-    // Group posts by conversation and create threads
-    const conversationMap = new Map<string, Post[]>();
-
-    for (const post of allPostsResult) {
-      const conversationId = post.conversation_id || "unknown";
-      if (!conversationMap.has(conversationId)) {
-        conversationMap.set(conversationId, []);
-      }
-      conversationMap.get(conversationId)!.push(post);
-    }
-
-    // Convert to threads with token estimation
-    const threads: ConversationThread[] = [];
-    let totalTokens = 0;
-
-    for (const [conversationId, posts] of conversationMap) {
-      if (posts.length === 0) continue;
-
-      const thread: ConversationThread = {
-        conversationId,
-        posts,
-        tokenCount: 0,
-      };
-
-      // Estimate tokens for this thread
-      const markdown = this.convertThreadToMarkdown(thread);
-      thread.tokenCount = this.estimateTokens(markdown);
-
-      // Check if adding this thread would exceed token limit
-      if (totalTokens + thread.tokenCount <= maxTokens) {
-        threads.push(thread);
-        totalTokens += thread.tokenCount;
-      } else {
-        console.log(
-          `Stopping at thread ${conversationId} to stay within token limit`
-        );
-        break;
-      }
-    }
-
-    console.log(
-      `Selected ${threads.length} threads with ~${totalTokens} tokens`
-    );
-
-    // Sort threads by most recent post in each thread
-    threads.sort((a, b) => {
-      const latestA = Math.max(
-        ...a.posts.map((p) => new Date(p.created_at).getTime())
-      );
-      const latestB = Math.max(
-        ...b.posts.map((p) => new Date(p.created_at).getTime())
-      );
-      return latestB - latestA;
-    });
-
-    // Convert threads to markdown
-    let finalMarkdown = `# Search Results\n\n`;
-    finalMarkdown += `Query: \`${searchQuery.q || "all posts"}\`\n\n`;
-    finalMarkdown += `Found ${threads.length} conversation threads (estimated ${totalTokens} tokens)\n\n`;
-    finalMarkdown += `---\n\n`;
-
-    for (const thread of threads) {
-      finalMarkdown += this.convertThreadToMarkdown(thread);
-    }
-
-    return finalMarkdown;
-  }
-
-  async ensureUserExists(authUser: UserContext["user"]): Promise<User> {
-    // Insert user if not exists
-    const existingUserResult = this.sql
-      .exec(`SELECT * FROM users WHERE id = ?`, authUser.id)
-      .toArray();
-
-    if (existingUserResult.length === 0) {
-      this.sql.exec(
-        `INSERT INTO users (id, username) VALUES (?, ?)`,
-        authUser.id,
-        authUser.username
-      );
-    }
-
-    // Get current user state
-    const userResult = this.sql
-      .exec<User>(`SELECT * FROM users WHERE id = ?`, authUser.id)
-      .toArray();
-
-    const user = userResult[0];
-
-    // Start sync if not started and user has balance
-    if (user.scrape_status === "pending" && user.balance > 0) {
-      console.log(`Starting sync for user ${authUser.username}`);
-      this.sql.exec(
-        `UPDATE users SET scrape_status = 'in_progress', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        authUser.id
-      );
-
-      // Start sync
-      this.ctx.waitUntil(this.performSync(authUser.id, authUser.username));
-    }
-
-    return user;
-  }
-
-  async startSync(username: string): Promise<void> {
-    console.log(`Starting sync for user ${username}`);
-    const user = this.sql
-      .exec<User>(`SELECT * FROM users WHERE username = ?`, username)
-      .toArray()[0];
-
-    if (!user) {
-      console.log("Couldn't find user");
-      return;
-    }
-
-    this.sql.exec(
-      `UPDATE users SET scrape_status = 'in_progress', updated_at = CURRENT_TIMESTAMP WHERE username = ?`,
-      username
-    );
-
-    await this.performSync(user.id, user.username);
-  }
-
-  private async performSync(userId: string, username: string): Promise<void> {
-    try {
-      console.log(`Performing sync for user ${username} (${userId})`);
-
-      // Get current user state
-      const userResult = this.sql
-        .exec<User>(`SELECT * FROM users WHERE id = ?`, userId)
-        .toArray();
-
-      if (userResult.length === 0) {
-        console.error(`User ${userId} not found`);
-        return;
-      }
-
-      const user = userResult[0];
-
-      // Check if user has sufficient balance
-      if (user.balance <= 0) {
-        console.log(`User ${username} has no balance, stopping sync`);
-        this.sql.exec(
-          `UPDATE users SET scrape_status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-          userId
-        );
-        return;
-      }
-
-      // Determine sync direction and parameters
-      const now = new Date();
-      let syncBackwards = false;
-      let cursor: string | undefined;
-
-      if (!user.is_sync_complete) {
-        // First sync - start from now and go backwards
-        syncBackwards = true;
-        cursor = user.synced_from_cursor;
-
-        console.log(
-          `First sync for ${username} - going backwards from ${cursor}`
-        );
-      } else {
-        const syncedUntilDate = new Date(user.synced_until);
-        const overlapDate = new Date(
-          syncedUntilDate.getTime() - SYNC_OVERLAP_HOURS * 60 * 60 * 1000
-        );
-        cursor = user.synced_from_cursor;
-        user.synced_until;
-        // TODO: this doesn't seem right.
-      }
-
-      // Fetch posts
-      const postsResponse = await this.fetchUserPosts(username, cursor);
-      console.log(`Posts API response status: ${postsResponse.msg}`);
-
-      if (
-        postsResponse.msg !== "success" ||
-        !postsResponse.data?.tweets?.length
-      ) {
-        console.log(`No new posts found for ${username}`);
-
-        if (syncBackwards && !user.is_sync_complete) {
-          // Mark sync as complete if we were going backwards and found no more posts
-          this.sql.exec(
-            `UPDATE users SET is_sync_complete = 1, synced_from_cursor = NULL, scrape_status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-            userId
-          );
-          console.log(`Backwards sync completed for ${username}`);
-        }
-        return;
-      }
-
-      const tweets = postsResponse.data.tweets;
-      console.log(`Found ${tweets.length} tweets for ${username}`);
-
-      // Process all tweets in parallel
-      const tweetProcessingPromises = tweets.map(async (tweet) => {
-        let postsProcessed = 0;
-
-        try {
-          // Store the main tweet
-          await this.storePost(userId, tweet);
-          postsProcessed++;
-
-          // Get thread context for this tweet
-          try {
-            const threadResponse = await this.fetchThreadContext(tweet.id);
-
-            if (
-              threadResponse.status === "success" &&
-              threadResponse.tweets?.length
-            ) {
-              // Store all thread replies in parallel
-              await Promise.all(
-                threadResponse.tweets.map(async (reply) => {
-                  await this.storePost(userId, reply);
-                  return 1; // Count of posts processed
-                })
-              );
-              postsProcessed += threadResponse.tweets.length;
-            }
-          } catch (error) {
-            console.error(
-              `Failed to fetch thread for tweet ${tweet.id}:`,
-              error
-            );
-          }
-
-          return postsProcessed;
-        } catch (error) {
-          console.error(`Failed to process tweet ${tweet.id}:`, error);
-          return 0;
-        }
-      });
-
-      // Wait for all tweet processing to complete
-      const processingResults = await Promise.all(tweetProcessingPromises);
-      const totalPostsProcessed = processingResults.reduce(
-        (sum, count) => sum + count,
-        0
-      );
-
-      console.log(`Processed ${totalPostsProcessed} posts total`);
-
-      // Calculate cost and deduct from balance
-      const cost = Math.ceil(totalPostsProcessed * SYNC_COST_PER_POST * 100); // Convert to cents
-      console.log(
-        `Processed ${totalPostsProcessed} posts, cost: $${cost / 100}`
-      );
-
-      // Update user record
-      const newBalance = Math.max(0, user.balance - cost);
-      const oldestTweet = tweets[tweets.length - 1];
-      const newestTweet = tweets[0];
-
-      let updateQuery: string;
-      let updateParams: any[];
-
-      if (syncBackwards) {
-        // Update synced_from and cursor
-        updateQuery = `
-        UPDATE users SET 
-          balance = ?, 
-          synced_from = COALESCE(?, synced_from),
-          synced_from_cursor = ?,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `;
-        updateParams = [
-          newBalance,
-          oldestTweet.createdAt,
-          postsResponse.next_cursor || oldestTweet.id,
-          userId,
-        ];
-      } else {
-        // Update synced_until
-        updateQuery = `
-        UPDATE users SET 
-          balance = ?, 
-          synced_until = ?,
-          updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-      `;
-        updateParams = [newBalance, newestTweet.createdAt, userId];
-      }
-
-      this.sql.exec(updateQuery, ...updateParams);
-
-      // Check if we should continue syncing
-      const shouldContinue =
-        newBalance > 0 &&
-        (postsResponse.has_next_page ||
-          (!syncBackwards && !user.is_sync_complete));
-
-      if (shouldContinue) {
-        console.log(`Scheduling next sync for ${username} in 1 second`);
-        // Schedule next sync in 1 second
-        await this.ctx.storage.setAlarm(Date.now() + 1000);
-      } else {
-        console.log(`Sync completed for ${username}`);
-        this.sql.exec(
-          `UPDATE users SET scrape_status = 'completed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-          userId
-        );
-      }
-    } catch (error) {
-      console.error(`Sync failed for user ${username}:`, error);
-      this.sql.exec(
-        `UPDATE users SET scrape_status = 'failed', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
-        userId
-      );
-    }
-  }
-
-  private async fetchUserPosts(
-    username: string,
-    cursor?: string
-  ): Promise<TwitterAPIResponse> {
-    let url = `https://api.twitterapi.io/twitter/user/last_tweets?userName=${username}&includeReplies=true`;
-
-    if (cursor) {
-      url += `&cursor=${cursor}`;
-    }
-
-    console.log(`Fetching user posts from: ${url}`);
-
-    const response = await fetch(url, {
-      headers: {
-        "X-API-Key": this.env.X_API_KEY,
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(
-        `Failed to fetch posts: ${response.status} ${response.statusText}`,
-        errorText
-      );
-      throw new Error(
-        `Failed to fetch posts: ${response.status} ${response.statusText}`
-      );
-    }
-
-    const data = (await response.json()) as TwitterAPIResponse;
-    return data;
-  }
-
-  private async fetchThreadContext(
-    tweetId: string,
-    cursor?: string
-  ): Promise<ThreadContextResponse> {
-    const baseUrl = `https://api.twitterapi.io/twitter/tweet/thread_context?tweetId=${tweetId}`;
-    const url = cursor ? `${baseUrl}&cursor=${cursor}` : baseUrl;
-
-    // console.log(`Fetching thread context from: ${url}`);
-
-    const response = await fetch(url, {
-      headers: {
-        "X-API-Key": this.env.X_API_KEY,
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(
-        `Failed to fetch thread: ${response.status} ${response.statusText}`,
-        errorText
-      );
-      throw new Error(
-        `Failed to fetch thread: ${response.status} ${response.statusText}`
-      );
-    }
-
-    const data = (await response.json()) as ThreadContextResponse;
-
-    // If there are more pages, recursively fetch them
-    if (data.has_next_page && data.next_cursor) {
-      // console.log(`Fetching next page with cursor: ${data.next_cursor}`);
-
-      try {
-        const nextPageData = await this.fetchThreadContext(
-          tweetId,
-          data.next_cursor
-        );
-
-        // Merge the tweets from subsequent pages
-        return {
-          ...data,
-          tweets: [...(data.tweets || []), ...(nextPageData.tweets || [])],
-          has_next_page: nextPageData.has_next_page,
-          next_cursor: nextPageData.next_cursor,
-        };
-      } catch (error) {
-        console.error(
-          `Failed to fetch next page for thread ${tweetId}:`,
-          error
-        );
-        // Return current data if next page fails
-        return data;
-      }
-    }
-
-    return data;
-  }
-
-  private formatTweetText(tweet: Tweet): string {
-    let tweetText = tweet.text || "";
-
-    // Expand URLs in the tweet text
-    if (tweet.entities?.urls && tweet.entities.urls.length > 0) {
-      for (const urlEntity of tweet.entities.urls) {
-        tweetText = tweetText.replace(urlEntity.url, urlEntity.expanded_url);
-      }
-    }
-
-    // Remove media URLs from text to avoid duplication since we'll store them separately
-    if (
-      tweet.extendedEntities?.media &&
-      tweet.extendedEntities.media.length > 0
-    ) {
-      for (const media of tweet.extendedEntities.media) {
-        tweetText = tweetText.replace(media.url, "");
-      }
-    }
-
-    return tweetText.trim();
-  }
-
-  private extractMediaUrls(tweet: Tweet): string {
-    const mediaItems: string[] = [];
-
-    if (
-      tweet.extendedEntities?.media &&
-      tweet.extendedEntities.media.length > 0
-    ) {
-      const uniqueMedia = new Set(
-        tweet.extendedEntities.media
-          .map((media) => {
-            // For photos, just include the URL
-            if (media.type === "photo") {
-              return `[Image: ${media.media_url_https}]`;
-            }
-            // For videos and GIFs, include both the thumbnail and video URL if available
-            else if (media.type === "video" || media.type === "animated_gif") {
-              const videoUrl = media.video_info?.variants?.[0]?.url || "";
-              if (videoUrl) {
-                return `[Video: ${videoUrl}]`;
-              } else {
-                return `[Video: ${media.media_url_https}]`;
-              }
-            }
-            return "";
-          })
-          .filter((item) => item.length > 0)
-      );
-
-      mediaItems.push(...Array.from(uniqueMedia));
-    }
-
-    return mediaItems.join("\n");
-  }
-
-  private formatAuthorBio(author: UserInfo): string {
-    let bio = author.description || "";
-
-    // Expand URLs in bio
-    if (
-      author.entities?.description?.urls &&
-      author.entities.description.urls.length > 0
-    ) {
-      for (const urlEntity of author.entities.description.urls) {
-        bio = bio.replace(urlEntity.url, urlEntity.expanded_url);
-      }
-    }
-
-    return bio;
-  }
-
-  private getAuthorUrl(author: UserInfo): string {
-    // Check if there's a URL in the author's entities
-    if (author.entities?.url?.urls && author.entities.url.urls.length > 0) {
-      return author.entities.url.urls[0].expanded_url;
-    }
-    return "";
-  }
-
-  private getProfileImageUrl(profilePicture: string): string {
-    // Replace _normal with _400x400 for higher resolution
-    return profilePicture.replace(/_normal\./, "_400x400.");
-  }
-
-  private async storePost(userId: string, tweet: Tweet): Promise<void> {
-    try {
-      const formattedText = this.formatTweetText(tweet);
-      const mediaUrls = this.extractMediaUrls(tweet);
-      const fullTextWithMedia = mediaUrls
-        ? `${formattedText}\n${mediaUrls}`
-        : formattedText;
-
-      const authorBio = this.formatAuthorBio(tweet.author);
-      const authorUrl = this.getAuthorUrl(tweet.author);
-      const authorProfileImage = tweet.author.profilePicture
-        ? this.getProfileImageUrl(tweet.author.profilePicture)
-        : "";
-
-      this.sql.exec(
-        `INSERT OR REPLACE INTO posts (
-        user_id, tweet_id, text, author_username, author_name,
-        created_at, like_count, retweet_count, reply_count,
-        is_reply, conversation_id, raw_data,
-        author_profile_image_url, author_bio, author_location,
-        author_url, author_verified, bookmark_count, view_count
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        userId,
-        tweet.id,
-        fullTextWithMedia,
-        tweet.author?.userName || "",
-        tweet.author?.name || "",
-        tweet.createdAt || "",
-        tweet.likeCount || 0,
-        tweet.retweetCount || 0,
-        tweet.replyCount || 0,
-        tweet.isReply ? 1 : 0,
-        tweet.conversationId || "",
-        JSON.stringify(tweet),
-        authorProfileImage,
-        authorBio,
-        tweet.author?.location || "",
-        authorUrl,
-        tweet.author?.isBlueVerified ? 1 : 0,
-        tweet.bookmarkCount || 0,
-        tweet.viewCount || 0
-      );
-    } catch (error) {
-      console.error(`Failed to store post ${tweet.id}:`, error);
-    }
-  }
-
-  async getUserStats(authUser: UserContext["user"]): Promise<UserStats> {
-    const user = await this.ensureUserExists(authUser);
-
-    const postCountResult = this.sql
-      .exec(
-        `SELECT COUNT(*) as count FROM posts WHERE user_id = ?`,
-        authUser.id
-      )
-      .toArray()[0] as { count: number };
-
-    return {
-      postCount: postCountResult.count,
-      balance: user.balance,
-      isPremium: Boolean(user.is_premium),
-      isPublic: Boolean(user.is_public),
-      isFeatured: Boolean(user.is_featured), // Add this line
-      initialized: Boolean(user.initialized),
-      scrapeStatus: user.scrape_status as
-        | "pending"
-        | "in_progress"
-        | "completed"
-        | "failed",
-      syncComplete: Boolean(user.is_sync_complete),
-      syncedFrom: user.synced_from,
-      syncedUntil: user.synced_until,
-    };
-  }
-}
-
 export default {
   fetch: withMcp(
     withSimplerAuth(
@@ -1641,19 +1925,25 @@ export default {
             return Response.redirect(url.origin + "/dashboard", 302);
           }
           return new Response(loginPage, {
-            headers: { "Content-Type": "text/html" },
+            headers: { "Content-Type": "text/html;charset=utf8" },
           });
         }
 
-        if (url.pathname === "/admin") {
+        if (url.pathname.endsWith("/admin")) {
           if (!ctx.authenticated) {
             return Response.redirect(url.origin + "/login", 302);
           }
 
+          if (ctx.user.username !== ADMIN_USERNAME) {
+            return new Response("Unauthorized", { status: 401 });
+          }
+
+          const username = url.pathname.split("/")[1];
+
           try {
             // Get user's Durable Object
             const userDO = env.USER_DO.get(
-              env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.username)
+              env.USER_DO.idFromName(DO_NAME_PREFIX + username)
             );
 
             return studioMiddleware(request, userDO.raw, {
@@ -1713,7 +2003,7 @@ export default {
             const dashboardHtml = dashboardPage(ctx.user, stats);
 
             return new Response(dashboardHtml, {
-              headers: { "Content-Type": "text/html" },
+              headers: { "Content-Type": "text/html;charset=utf8" },
             });
           } catch (error) {
             console.error("Dashboard error:", error);
@@ -1724,16 +2014,20 @@ export default {
         if (url.pathname === "/stripe-webhook") {
           return handleStripeWebhook(request, env);
         }
-        if (url.pathname === "/sync") {
+        if (url.pathname.endsWith("/sync")) {
+          const username = url.pathname.split("/")[1];
+
           if (!ctx.user?.username) {
             return new Response("Unauthorized", { status: 401 });
           }
+
           const userDO = env.USER_DO.get(
-            env.USER_DO.idFromName(DO_NAME_PREFIX + ctx.user.username)
+            env.USER_DO.idFromName(DO_NAME_PREFIX + username)
           );
 
+          const user = await userDO.ensureUserExists(username);
           // Start sync after payment
-          await userDO.startSync(ctx.user.username);
+          await userDO.startSync(username);
           return new Response("Started sync");
         }
 
@@ -1765,7 +2059,7 @@ export default {
             );
 
             return new Response(pricingPageWithData, {
-              headers: { "Content-Type": "text/html" },
+              headers: { "Content-Type": "text/html;charset=utf8" },
             });
           } catch (error) {
             console.error("Pricing page error:", error);
@@ -1787,11 +2081,11 @@ export default {
             );
 
             // Get author stats
-            const stats = await userDO.getAuthorStats(ctx.user?.id, 150);
+            const stats = await userDO.getAuthorStats(ctx.user?.username, 150);
             const statsHtml = statsPage(username, stats);
 
             return new Response(statsHtml, {
-              headers: { "Content-Type": "text/html" },
+              headers: { "Content-Type": "text/html;charset=utf8" },
             });
           } catch (error) {
             console.error("Stats page error:", error);
@@ -1851,7 +2145,7 @@ export default {
           );
 
           // Perform search
-          const markdown = await userDO.searchPosts(ctx.user?.id, {
+          const markdown = await userDO.searchPosts(ctx.user?.username, {
             q: query,
             maxTokens,
           });
@@ -1983,10 +2277,15 @@ async function handleStripeWebhook(
       env.USER_DO.idFromName(DO_NAME_PREFIX + username)
     );
 
-    // Update balance and premium status
+    // Update balance, premium status, and history limits
     await userDO.exec(
-      "UPDATE users SET is_premium = 1, balance = balance + ? WHERE username = ?",
+      `UPDATE users SET 
+        is_premium = 1, 
+        balance = balance + ?, 
+        history_max_count = ?
+       WHERE username = ?`,
       amount_total,
+      PREMIUM_MAX_HISTORIC_POSTS,
       username
     );
 

@@ -17,6 +17,12 @@ Now, I can make the following for parallel
 - Do one-time named entity recognition
 - Any examples in the playground use these named entities
 
+# Refactor to use advanced search
+
+It seems in my manual way that i triggered sync twice. This must not be possible.
+
+Advice from twitterapi.io admin: use advanced search and don't rely on cursor - it's less likely to get me into trouble with broken cursors
+
 # Interaction Analysis
 
 What's the most valuable? I guess a full context over my top N people is super valuable!!!!! Imagine a chat with janwilmake that knows his top 50 interactions very well, allowing it to use tool of another person context! Also, entities are super important for further deepening context. This is what will make it really stand out.
@@ -26,7 +32,7 @@ Core feature:
 - After initial sync is complete, for your top 150, do one LLM query per interaction, extracting `{ x_usernames:{[key:string]:string}, companies:{[key:string]:string}, websites:{[key:string]:string}, search_keywords:string[], interaction_summary:string,...}` and store `ai_analysis_interaction_count`.
 - Redo it every week for accounts where more than 10 new interactions took place.
 - Charge for LLM cost.
-- Create `interactions_summary:string` which does an LLM prompt max once a month over all your interactions
+- Create `interactions_analysis:{summary:string,beliefs,principles,values}` which does an LLM prompt max once a month over all your interactions
 - Add `interactions` JSON[] and `interactions_summary` into `users` as new columns
 - Add interaction analysis into stats page
 - Add structured data for this
@@ -36,6 +42,10 @@ Core feature:
 
 # SUPER WISHLIST
 
+## LLMS.txt and context IDE integrations
+
+Based on the interactions analysis we can also create a llms.txt for custom contexts. This can in turn be integrated with tools like https://conare.ai. Another way could be as MCP resources.
+
 ## Minibenchmark
 
 simple benchmark: ask questions about your friends people were asking grok a while ago for fun. vibe benchmark grok vs. grokthyself. put on landing.
@@ -43,3 +53,43 @@ simple benchmark: ask questions about your friends people were asking grok a whi
 ## Chat Completions
 
 This is literally gold if done well. It should never halucinate and always stay w'in bounds of truth. People must be able to chat with it over my DMs if I don't reply. This is literally epic!
+
+## Viral Feature
+
+After purchasing, you can give 10 invites to friends, who will get $5 for free.
+
+## Chat Completion Thread Simulation
+
+Imagine you could simulate a conversation between 2 (or more) profiles. This is such an underexplored new paradigm!
+
+## Private datapoints
+
+Mainly:
+
+- dms
+- likes
+- bookmarks
+
+Some can be done at $200/m, while some likely require $5000/m
+
+## OAuth Provider with scopes
+
+Allow {CLIENT_ID} to get access to:
+
+- my network
+- my interaction analysis
+- entities
+- my recent posts & comments
+
+This is huge! Must put checkmarks into oauth provider as well.
+
+## Ship well-converting landingpage
+
+- Free trial
+- Then early bird price $29
+- Price increases to $59 within a week
+- Price finally becomes $129
+
+https://conare.ai
+
+Make shipping plan and actually apply it.

@@ -272,10 +272,7 @@
                 premiumCard.appendChild(currentBadge);
 
                 // Update free button
-                freeButton.textContent = 'Downgrade to Free';
-                freeButton.classList.remove('disabled');
-                freeButton.disabled = false;
-                freeButton.style.cursor = 'pointer';
+                freeButton.remove()
             } else {
                 // User is on free tier
                 freeCard.classList.add('current-plan');
