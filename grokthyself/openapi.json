@@ -22,9 +22,10 @@
             "in": "query",
             "required": false,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Optional: Search query. Supports keywords, from:username, before:YYYY-MM-DD, after:YYYY-MM-DD, AND/OR operators"
             },
-            "description": "Search query. Supports keywords, from:username, before:YYYY-MM-DD, after:YYYY-MM-DD, AND/OR operators",
+            "description": "Optional: Search query. Supports keywords, from:username, before:YYYY-MM-DD, after:YYYY-MM-DD, AND/OR operators",
             "examples": {
               "simple": {
                 "value": "javascript",
@@ -46,6 +47,7 @@
             "required": false,
             "schema": {
               "type": "integer",
+              "description": "Optional: Maximum number of tokens to return in the response",
               "minimum": 1,
               "maximum": 5000000,
               "default": 10000
