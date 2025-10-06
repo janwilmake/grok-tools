@@ -1,4 +1,3 @@
-`
 <!DOCTYPE html>
 <html lang="en" class="bg-amber-50">
 
@@ -96,6 +95,22 @@
                             use it outside of X.
                         </span>
                     </label>
+
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" id="public-check"
+                            class="mt-1 w-5 h-5 text-amber-700 rounded focus:ring-amber-500">
+                        <span class="text-amber-800">
+                            I want my X data to be fully public so others can use it as AI connector.
+                        </span>
+                    </label>
+
+                    <label class="flex items-start gap-3 cursor-pointer">
+                        <input type="checkbox" id="featured-check"
+                            class="mt-1 w-5 h-5 text-amber-700 rounded focus:ring-amber-500">
+                        <span class="text-amber-800">
+                            I want my profile to be featured so my X data can be more helpful to others.
+                        </span>
+                    </label>
                 </div>
             </div>
 
@@ -112,6 +127,8 @@
     <script>
         const termsCheck = document.getElementById('terms-check');
         const consentCheck = document.getElementById('consent-check');
+        const publicCheck = document.getElementById('public-check');
+        const featuredCheck = document.getElementById('featured-check');
         const loginBtn = document.getElementById('login-btn');
 
         function updateLoginButton() {
@@ -124,7 +141,20 @@
 
         loginBtn.addEventListener('click', () => {
             if (!loginBtn.disabled) {
-                window.location.href = '/authorize?redirect_to=/dashboard';
+                // Build query parameters based on checkbox states
+                const params = new URLSearchParams();
+                if (publicCheck.checked) {
+                    params.set('public', 'true');
+                }
+                if (featuredCheck.checked) {
+                    params.set('featured', 'true');
+                }
+
+                const redirectUrl = params.toString()
+                    ? `/dashboard?${params.toString()}`
+                    : '/dashboard';
+
+                window.location.href = `/authorize?redirect_to=${encodeURIComponent(redirectUrl)}`;
             }
         });
     </script>

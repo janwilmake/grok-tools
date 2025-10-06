@@ -21,28 +21,17 @@ How:
 # TODO:
 
 - ✅ Build out POC
-
-# Add monetization and daily update for premium users
-
 - ❌ Allow stripeflare as middleware with userID inserted.
 - ✅ Simpler stripe setup with webhook parsing and a payment link with username
 - ✅ Ensure initial scrape works well by ensuring it does NOT time out. This can be done using an alarm
 - ✅ After purchase, do follow-up scrape that gets all your data. SHOULD NOT FAIL or time out. We can do this by keeping track of `synced_from`
-
-# Misc
-
-- Fix links and media in the posts,
-- Add profile image of author
-- Configuration to make your own AI public (can be checkbox at startup)
-
-# Main Interactions
-
-- Make available `/USERNAME/stats` with other indexed people sorted by # of posts: `SELECT author_username, COUNT(*) as post_count FROM posts GROUP BY author_username ORDER BY post_count DESC;`
-- Add this into dashboard with easy click to retrieve all of the user that we have. This is a nice context for your overlap with someone.
-
-What's the most valuable? I guess a full context over my top N people is super valuable!!!!! Also generally, a way to show
-
-Imagine a chat with janwilmake that knows his top 50 interactions very well, allowing it to use tool of another person context!
+- ✅ Fix links and media in the posts
+- ✅ Surface profile image of author
+- ✅ Configuration to make your own AI public (also can be checkbox at startup)
+- ✅ Make available `/USERNAME/stats` with other indexed people sorted by # of posts: `SELECT author_username, COUNT(*) as post_count FROM posts GROUP BY author_username ORDER BY post_count DESC;`
+- ✅ Add this into dashboard with easy click to retrieve all of the user that we have. This is a nice context for your overlap with someone.
+- ✅ Add MCP installation button (installthismcp: link to https://grokthyself.com/{username}/mcp)
+- ✅ Expose the MCP (after login, only allow if username matches)
 
 # Fix sync
 
@@ -51,22 +40,22 @@ Imagine a chat with janwilmake that knows his top 50 interactions very well, all
 
 After I have this, it's already something I can use together with parallel tasks. I can build this and make it a real app within a week. I can give this away for free to some friends, and discount price on premium one from $129 to $49 temporarily.
 
-# MCP
-
-- ✅ Add MCP installation button (installthismcp: link to https://grokthyself.com/{username}/mcp)
-- ✅ Expose the MCP (after login, only allow if username matches)
-- Update package to allow using `mcpHandler` directly with prefilled variable from path, then offer an MCP for anyone
-- Add main interactions to main context, top-N filter on search
-
 # Limit large accounts
 
 - Add admin testing to sync accounts for free
 - Have a limit to how long thread can be (otherwise it can become too expensive for big accounts)
+- Maybe: limit post-count so I can get someones data for under $10. if he's got 10x the posts, 2.5M posts means $375 to scrape. https://x.com/Scobleizer/status/1975102387758285091. How to make it cheaper? It's not needed to have a margin on big accounts like this, but:
+  - admin should be able to assign a budget to anyone
+  - user should see history is scraped back until YYYY-MM-DD
+  - user should be able to keep being synced for months without paying the full amount
+  - looking at authorized posts percentage + total posts, we can estimate the total cost, and ask to purchase full history. use big margin.
 
 # Minibenchmark
 
 - simple benchmark: ask questions about your friends people were asking grok a while ago for fun. vibe benchmark grok vs. grokthyself. put on landing.
 
-# Chat Completions
+# SUPER WISHLIST
+
+## Chat Completions
 
 This is literally gold if done well. It should never halucinate and always stay w'in bounds of truth. People must be able to chat with it over my DMs if I don't reply. This is literally epic!
