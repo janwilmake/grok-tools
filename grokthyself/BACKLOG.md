@@ -10,10 +10,6 @@ Advice from twitterapi.io admin: use advanced search and don't rely on cursor - 
 
 Based on the interactions analysis we can also create a llms.txt for custom contexts. This can in turn be integrated with tools like https://conare.ai. Another way could be as MCP resources.
 
-## Minibenchmark
-
-simple benchmark: ask questions about your friends people were asking grok a while ago for fun. vibe benchmark grok vs. grokthyself. put on landing.
-
 ## Chat Completions
 
 This is literally gold if done well. It should never halucinate and always stay w'in bounds of truth. People must be able to chat with it over my DMs if I don't reply. This is literally epic!
@@ -46,14 +42,3 @@ Allow {CLIENT_ID} to get access to:
 - my recent posts & comments
 
 This is huge! Must put checkmarks into oauth provider as well.
-
-## Ship well-converting landingpage
-
-- Free trial
-- Then early bird price $29
-- Price increases to $59 within a week
-- Price finally becomes $129
-
-https://conare.ai
-
-Make shipping plan and actually apply it.

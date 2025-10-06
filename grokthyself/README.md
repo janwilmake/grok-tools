@@ -20,15 +20,53 @@ How:
 
 # TODO
 
-## better landingpage
+## Better landingpage
 
-- install myself as mcp, improve flow if there's problems
+- ✅ install myself as mcp
+- search without query surfaces old posts somehow. figure out: why?
 - work on good examples by using it
+- improve landingpage by showing cost similar to how
 
-## simplify installation
+## Try Scoble: How do i create a viral post just from some examples for him?
+
+- 🟠 Sync Scobleizer 100k posts
+- Improve MCP such that I can fill in the username beforehand
+- Add tool to get stats in markdown, with filters (date, topics, etc)! **❗️ thisis key to asking "who do i know" type questions!!!**
+- Quote https://x.com/Scobleizer/status/1975102387758285091 and make a thread "I built an MCP that knows Scobleizer and his network perfectly" with examples
+
+## Installation directly from landingpage
 
 - add `/login` in front in oauth flow
-- on frontpage, ask to
+- One-click installation for cursor, vscode
+- Instructions for others
+- First tool-call should start sync and respond with 'still syncing'
+- First purchase decision should happen asap
+- First wow-moment too
+- Link to pricing should log you in and redirect back to pricing
+
+## Minibenchmark
+
+simple benchmark: ask questions about your friends people were asking grok a while ago for fun. vibe benchmark grok vs. grokthyself. put on landing.
+
+## Ship well-converting landingpage
+
+- Free trial
+- Then early bird price $29
+- Price increases to $59 within a week
+- Price finally becomes $129
+
+https://conare.ai
+
+Make shipping plan and actually apply it.
+
+## Collect reviews
+
+- https://x.com/marcuswquinn/status/1975207453974556762
+- https://x.com/Scobleizer/status/1975102387758285091
+- monadoid
+- macieklaskus
+- maurice_kleine
+- lwz_ai
 
 ## Interaction Analysis
 
