@@ -18,7 +18,7 @@ How:
   - `timeline({q})`
 - Stripeflare for one-time purchase $99 to get user a balance
 
-# TODO:
+# First version (2025-10-05)
 
 - ✅ Build out POC
 - ❌ Allow stripeflare as middleware with userID inserted.
@@ -49,13 +49,3 @@ After I have this, it's already something I can use together with parallel tasks
   - user should see history is scraped back until YYYY-MM-DD
   - user should be able to keep being synced for months without paying the full amount
   - looking at authorized posts percentage + total posts, we can estimate the total cost, and ask to purchase full history. use big margin.
-
-# Minibenchmark
-
-- simple benchmark: ask questions about your friends people were asking grok a while ago for fun. vibe benchmark grok vs. grokthyself. put on landing.
-
-# SUPER WISHLIST
-
-## Chat Completions
-
-This is literally gold if done well. It should never halucinate and always stay w'in bounds of truth. People must be able to chat with it over my DMs if I don't reply. This is literally epic!

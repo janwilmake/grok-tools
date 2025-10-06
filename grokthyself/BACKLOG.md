@@ -33,3 +33,13 @@ Core feature:
 - Add this as main MCP system prompt
 - Update MCP such that `?username` is `.well-known/mcp-config` (optional, defaults to logged in user)
 - Create aggregate DO with just the users table (also has interactions)
+
+# SUPER WISHLIST
+
+## Minibenchmark
+
+simple benchmark: ask questions about your friends people were asking grok a while ago for fun. vibe benchmark grok vs. grokthyself. put on landing.
+
+## Chat Completions
+
+This is literally gold if done well. It should never halucinate and always stay w'in bounds of truth. People must be able to chat with it over my DMs if I don't reply. This is literally epic!
