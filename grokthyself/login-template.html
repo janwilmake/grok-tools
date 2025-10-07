@@ -59,12 +59,79 @@
             cursor: not-allowed;
         }
 
+        .info-card {
+            background: rgba(255, 255, 255, 0.8);
+            border: 2px solid #8b4513;
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            box-shadow: 0 4px 15px rgba(139, 69, 19, 0.2);
+        }
+
         .checkbox-container {
             background: rgba(255, 255, 255, 0.3);
             border: 2px solid #8b4513;
             border-radius: 0.75rem;
             padding: 1.5rem;
             margin: 1rem 0;
+        }
+
+        .data-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        @media (max-width: 640px) {
+            .data-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .data-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+        }
+
+        .data-item.included {
+            background-color: rgba(34, 197, 94, 0.1);
+            color: #15803d;
+        }
+
+        .data-item.excluded {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+        }
+
+        .check-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .check-icon.included {
+            background-color: #22c55e;
+            color: white;
+        }
+
+        .check-icon.excluded {
+            background-color: #ef4444;
+            color: white;
+        }
+
+        .separator-line {
+            border-top: 2px solid #8b4513;
+            margin: 1.5rem 0;
+            opacity: 0.3;
         }
     </style>
 </head>
@@ -73,6 +140,41 @@
     <main class="min-h-screen flex flex-col items-center justify-center px-4 py-16">
         <div class="text-center max-w-2xl mx-auto">
             <h1 class="latin-title mb-8">GROK THYSELF</h1>
+
+            <!-- Data Access Information -->
+            <div class="info-card text-left">
+                <h2 class="text-xl font-bold text-amber-800 mb-3 text-center">What Data We Access</h2>
+                <p class="text-amber-700 text-sm mb-4 text-center">
+                    We believe in transparency. Here's exactly what Grok Thyself reads from your X account:
+                </p>
+
+                <div class="data-list">
+                    <div class="data-item included">
+                        <div class="check-icon included">✓</div>
+                        <span class="font-medium">Posts (Tweets)</span>
+                    </div>
+                    <div class="data-item included">
+                        <div class="check-icon included">✓</div>
+                        <span class="font-medium">Comments (Replies)</span>
+                    </div>
+                    <div class="data-item excluded">
+                        <div class="check-icon excluded">✗</div>
+                        <span class="font-medium">Likes</span>
+                    </div>
+                    <div class="data-item excluded">
+                        <div class="check-icon excluded">✗</div>
+                        <span class="font-medium">Bookmarks</span>
+                    </div>
+                    <div class="data-item excluded">
+                        <div class="check-icon excluded">✗</div>
+                        <span class="font-medium">Direct Messages</span>
+                    </div>
+                </div>
+
+                <p class="text-amber-600 text-sm mt-4 text-center italic">
+                    We only access your public posts and comments to help you understand your digital self.
+                </p>
+            </div>
 
             <div class="checkbox-container text-left">
                 <div class="space-y-4">
@@ -92,9 +194,15 @@
                             class="mt-1 w-5 h-5 text-amber-700 rounded focus:ring-amber-500">
                         <span class="text-amber-800">
                             I approve Grok Thyself to get all my personal X content from the X platform to allow me to
-                            use it outside of X.
+                            use it outside of X
                         </span>
                     </label>
+
+                    <div class="separator-line"></div>
+
+                    <h3 class="text-lg font-bold text-amber-800 mb-2">Settings</h3>
+                    <p class="text-amber-600 text-sm mb-4">You can select these options now, or later under "Settings".
+                    </p>
 
                     <label class="flex items-start gap-3 cursor-pointer">
                         <input type="checkbox" id="public-check"

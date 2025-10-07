@@ -20,55 +20,51 @@ How:
 
 # TODO
 
-## Better landingpage
+## ADD TOOL FOR INTERACTIONS!
 
-- ✅ install myself as mcp
-- search without query surfaces old posts somehow. figure out: why?
-- work on good examples by using it
-- improve landingpage by showing cost similar to how
+- ✅ Update MCP such that `?username` is `.well-known/mcp-config` (optional, defaults to logged in user)
+- Add tool to get stats in markdown
+- instruct it that, for 'who' queries, it should look up stats first and simply query top people that seem possible, and give actual links to X posts.
+- Do 'who do I know that may be interested in my new MCP, and why?'
+- Make a thread on this and tag them.
+- Also make secret URL available returning JSON[] of your interactons (for Parallel)
 
-## Try Scoble: How do i create a viral post just from some examples for him?
+## Parallel for Headhunting
+
+https://jobs.ashbyhq.com/parallel - do a thread on this! perfect for startup founders to find people they already know that might be looking for work. need to use my network and the interactions to determine whether or not they have
+
+Use Parallel Task Group MCP with the Grokthsyelf MCP enabled on every task, with a starting URL being the key info I have about these interactions.
+
+This needs the ability to oauth other MCP servers by calling the tool.
+
+## Try Scoble: How do I create a viral post just from some examples for him?
 
 - 🟠 Sync Scobleizer 100k posts
-- Improve MCP such that I can fill in the username beforehand
-- Add tool to get stats in markdown, with filters (date, topics, etc)! **❗️ thisis key to asking "who do i know" type questions!!!**
 - Quote https://x.com/Scobleizer/status/1975102387758285091 and make a thread "I built an MCP that knows Scobleizer and his network perfectly" with examples
 
-## Installation directly from landingpage
+https://letmeprompt.com/rules-httpsuithu-aazo5hr9df5s9k
 
-- add `/login` in front in oauth flow
-- One-click installation for cursor, vscode
-- Instructions for others
-- First tool-call should start sync and respond with 'still syncing'
-- First purchase decision should happen asap
-- First wow-moment too
-- Link to pricing should log you in and redirect back to pricing
+## Bug DO spawns
 
-## Minibenchmark
+`GET https://grokthyself.com//sito/wp-includes/wlwmanifest.xml - Ok @ 10/6/2025, 5:13:49 PM (log) Posts search request: q="", maxTokens=10000`
 
-simple benchmark: ask questions about your friends people were asking grok a while ago for fun. vibe benchmark grok vs. grokthyself. put on landing.
-
-## Ship well-converting landingpage
-
-- Free trial
-- Then early bird price $29
-- Price increases to $59 within a week
-- Price finally becomes $129
-
-https://conare.ai
-
-Make shipping plan and actually apply it.
-
-## Collect reviews
-
-- https://x.com/marcuswquinn/status/1975207453974556762
-- https://x.com/Scobleizer/status/1975102387758285091
-- monadoid
-- macieklaskus
-- maurice_kleine
-- lwz_ai
+It is getting lots of these requests, they should hit 404! must be just 1 segment and that must be a DO with user with a row.
 
 ## Interaction Analysis
+
+What's the most valuable? I guess a full context over my top N people is super valuable!!!!! Imagine a chat with janwilmake that knows his top 50 interactions very well, allowing it to use tool of another person context! Also, entities are super important for further deepening context. This is what will make it really stand out.
+
+Core feature:
+
+- After initial sync is complete (only for premium), for your top 150, do one LLM query per interaction, extracting `{ x_usernames:{[key:string]:string}, companies:{[key:string]:string}, websites:{[key:string]:string}, search_keywords:string[], interaction_summary:string,...}` and store `ai_analysis_interaction_count`.
+- Redo it every week for accounts where more than 10 new interactions took place.
+- Charge for LLM cost.
+- Create `interactions_analysis:{summary:string,beliefs,principles,values}` which does an LLM prompt max once a month over all your interactions
+- Add `interactions` JSON[] and `interactions_summary` into `users` as new columns
+- Add interaction analysis into stats page
+- Add structured data for this
+- Add this as main MCP system prompt
+- Create aggregate DO with just the users table (also has interactions)
 
 <!--
 See https://letmeprompt.com/httpsmarkdownfeed-xcibrc0
@@ -91,17 +87,48 @@ Now, I can make the following for parallel
 - Any examples in the playground use these named entities
 -->
 
-What's the most valuable? I guess a full context over my top N people is super valuable!!!!! Imagine a chat with janwilmake that knows his top 50 interactions very well, allowing it to use tool of another person context! Also, entities are super important for further deepening context. This is what will make it really stand out.
+## Bug quoted posts
 
-Core feature:
+It should show the quoted thing too!!! context should be available in result already. Just simply make it part of the text in this case.
 
-- After initial sync is complete, for your top 150, do one LLM query per interaction, extracting `{ x_usernames:{[key:string]:string}, companies:{[key:string]:string}, websites:{[key:string]:string}, search_keywords:string[], interaction_summary:string,...}` and store `ai_analysis_interaction_count`.
-- Redo it every week for accounts where more than 10 new interactions took place.
-- Charge for LLM cost.
-- Create `interactions_analysis:{summary:string,beliefs,principles,values}` which does an LLM prompt max once a month over all your interactions
-- Add `interactions` JSON[] and `interactions_summary` into `users` as new columns
-- Add interaction analysis into stats page
-- Add structured data for this
-- Add this as main MCP system prompt
-- Update MCP such that `?username` is `.well-known/mcp-config` (optional, defaults to logged in user)
-- Create aggregate DO with just the users table (also has interactions)
+## Better landingpage
+
+- ✅ install myself as mcp
+- Search without query surfaces old posts somehow. figure out: why?
+- Work on good examples by using it
+- Improve landingpage by showing cost similar to how
+
+## Installation directly from landingpage
+
+- add `/login` in front in oauth flow
+- One-click installation for cursor, vscode
+- Instructions for others
+- First tool-call should start sync and respond with 'still syncing'
+- First purchase decision should happen asap
+- First wow-moment too
+- Link to pricing should log you in and redirect back to pricing
+
+## Minibenchmark
+
+Simple benchmark: ask questions about your friends people were asking grok a while ago for fun. vibe benchmark grok vs. grokthyself. put on landing.
+
+## Ship well-converting landingpage
+
+- Free trial
+- Then early bird price $29
+- Price increases to $59 within a week
+- Price finally becomes $129
+
+https://conare.ai
+
+Make shipping plan and actually apply it.
+
+## Collect reviews
+
+- https://x.com/marcuswquinn/status/1975207453974556762
+- https://x.com/Scobleizer/status/1975102387758285091
+- https://x.com/janwilmake/status/1975310720993779974
+- monadoid
+- macieklaskus
+- maurice_kleine
+- lwz_ai

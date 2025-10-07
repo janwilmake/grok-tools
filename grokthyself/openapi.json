@@ -3,7 +3,7 @@
   "info": {
     "title": "Grok Thyself API",
     "version": "1.0.0",
-    "description": "API for searching and retrieving X (Twitter) history data",
+    "description": "API for searching and retrieving X (Twitter) history data.\n\n- **search** - Most useful when looking for full details around past conversations\n- **stats** - Most useful to first get a high level overview of your top interactions.\n\nMost powerful usage pattern: first retrieve a high level overview of top interactions, then dive into more specific topics or people using one or several searches, to get a deep understanding of the most valuable interactions.\n\nTips:\n\n- use markdown tables to more nicely shape the answer to a prompt\n- If the user asks about things like retrieving followers, likes, bookmarks, dms, note that this isn't possible and explain what IS possible.\n- Always render markdown links to x.com/username for every username mentioned.",
     "contact": { "url": "https://grokthyself.com" }
   },
   "servers": [
@@ -15,8 +15,17 @@
       "get": {
         "operationId": "search",
         "summary": "Search user's posts",
-        "description": "Search through a user's X (Twitter) posts and return matching conversation threads in markdown format",
+        "description": "Search through a user's X (Twitter) posts and return matching conversation threads in markdown format.",
         "parameters": [
+          {
+            "name": "username",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional: X Username to use search with"
+            }
+          },
           {
             "name": "q",
             "in": "query",
@@ -25,7 +34,6 @@
               "type": "string",
               "description": "Optional: Search query. Supports keywords, from:username, before:YYYY-MM-DD, after:YYYY-MM-DD, AND/OR operators"
             },
-            "description": "Optional: Search query. Supports keywords, from:username, before:YYYY-MM-DD, after:YYYY-MM-DD, AND/OR operators",
             "examples": {
               "simple": {
                 "value": "javascript",
@@ -119,6 +127,83 @@
           }
         }
       }
+    },
+    "/stats": {
+      "get": {
+        "operationId": "stats",
+        "summary": "Get user interaction statistics",
+        "description": "Retrieve interaction statistics showing the most frequent authors the user has engaged with.",
+        "parameters": [
+          {
+            "name": "username",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Optional: X Username to get stats for"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User interaction statistics",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "<!DOCTYPE html><html>...</html>"
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "# Interaction Statistics - @username\n\n## Top Interactions by Post Count\n\n### 1. @example_user\n\n**Name:** Example User ✓\n**Posts:** 42\n**Latest Post:** Jan 15, 2024\n**Bio:** Software engineer and AI enthusiast\n**Location:** San Francisco, CA\n\n"
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - authentication required",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden - user has not made posts public",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -180,6 +265,51 @@
             "description": "Maximum number of tokens to return"
           }
         }
+      },
+      "AuthorStats": {
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "Author's X username"
+          },
+          "name": {
+            "type": "string",
+            "description": "Author's display name"
+          },
+          "postCount": {
+            "type": "integer",
+            "description": "Number of posts/interactions"
+          },
+          "profileImageUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Author's profile image URL"
+          },
+          "bio": {
+            "type": "string",
+            "description": "Author's bio/description"
+          },
+          "location": {
+            "type": "string",
+            "description": "Author's location"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "Author's website URL"
+          },
+          "isVerified": {
+            "type": "boolean",
+            "description": "Whether the author is verified"
+          },
+          "latestPostDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Date of the author's most recent post"
+          }
+        },
+        "required": ["username", "name", "postCount", "latestPostDate"]
       }
     }
   }

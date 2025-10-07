@@ -598,8 +598,12 @@ export class UserDO extends DurableObject<Env> {
     return markdown + "\n\n";
   }
 
-  private addPaymentNoticeIfNeeded(markdown: string, user: User): string {
-    if (!user.is_premium) {
+  private addPaymentNoticeIfNeeded(
+    markdown: string,
+    user: User,
+    requestedUsername: string
+  ): string {
+    if (!user.is_premium && user.username === requestedUsername) {
       const paymentNotice = `
 
 ---
@@ -613,7 +617,7 @@ Upgrade to Premium for:
 - Continued sync of future posts
 - Priority support
 
-[Upgrade now for $29 →](https://grokthyself.com/pricing)
+[Upgrade now →](https://grokthyself.com/pricing)
 
 ---
 
@@ -665,7 +669,7 @@ Upgrade to Premium for:
     if (conversationResults.length === 0) {
       const markdown =
         "# No posts found\n\nYour search didn't match any posts.";
-      return this.addPaymentNoticeIfNeeded(markdown, user);
+      return this.addPaymentNoticeIfNeeded(markdown, user, username);
     }
 
     // Get conversation IDs
@@ -680,7 +684,7 @@ Upgrade to Premium for:
     if (conversationIds.length === 0) {
       const markdown =
         "# No valid conversations found\n\nThe matching posts don't have valid conversation IDs.";
-      return this.addPaymentNoticeIfNeeded(markdown, user);
+      return this.addPaymentNoticeIfNeeded(markdown, user, username);
     }
 
     // Fetch all posts for these conversations
@@ -759,7 +763,7 @@ Upgrade to Premium for:
       finalMarkdown += this.convertThreadToMarkdown(thread);
     }
 
-    return this.addPaymentNoticeIfNeeded(finalMarkdown, user);
+    return this.addPaymentNoticeIfNeeded(finalMarkdown, user, username);
   }
 
   async ensureUserExists(u: string): Promise<User | null> {
@@ -1452,8 +1456,11 @@ Upgrade to Premium for:
 }
 
 // In the statsPage function, modify the CSS styles section:
-
-const statsPage = (username: string, stats: AuthorStats[]) => `<!DOCTYPE html>
+const statsPage = (
+  username: string,
+  stats: AuthorStats[],
+  userStats?: { isPremium: boolean; historyCount: number }
+) => `<!DOCTYPE html>
 <html lang="en" class="bg-amber-50">
 <head>
     <meta charset="UTF-8">
@@ -1506,8 +1513,8 @@ const statsPage = (username: string, stats: AuthorStats[]) => `<!DOCTYPE html>
             flex-direction: column;
             text-decoration: none;
             color: inherit;
-            height: 100%; /* Make all cards same height */
-            min-height: 200px; /* Set minimum height */
+            height: 100%;
+            min-height: 200px;
         }
 
         .author-card:hover {
@@ -1526,12 +1533,12 @@ const statsPage = (username: string, stats: AuthorStats[]) => `<!DOCTYPE html>
 
         .bio-text {
             display: -webkit-box;
-            -webkit-line-clamp: 3; /* Limit to 3 lines */
+            -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
             text-overflow: ellipsis;
             line-height: 1.4;
-            max-height: 4.2em; /* 3 lines × 1.4 line-height */
+            max-height: 4.2em;
             word-wrap: break-word;
             overflow-wrap: break-word;
         }
@@ -1541,6 +1548,153 @@ const statsPage = (username: string, stats: AuthorStats[]) => `<!DOCTYPE html>
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+        }
+
+        .limited-history-banner {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2));
+            border: 2px solid #f59e0b;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .upgrade-button {
+            background: linear-gradient(145deg, #f59e0b, #d97706);
+            box-shadow: 
+                inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+                0 4px 12px rgba(245, 158, 11, 0.3);
+            border: 2px solid #92400e;
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .upgrade-button:hover {
+            background: linear-gradient(145deg, #d97706, #f59e0b);
+            transform: translateY(-1px);
+            text-decoration: none;
+            color: white;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background: #f5e6d3;
+            border: 3px solid #8b4513;
+            border-radius: 1rem;
+            width: 90vw;
+            max-width: 900px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 2px solid #8b4513;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-text {
+            flex: 1;
+            background: #1f2937;
+            color: #10b981;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            min-height: 250px;
+            padding: 1rem;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            border: none;
+            resize: none;
+        }
+
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 2px solid #8b4513;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #8b4513;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            transition: background-color 0.2s;
+        }
+
+        .close-button:hover {
+            background-color: rgba(139, 69, 19, 0.1);
+        }
+
+        .copy-button {
+            background: linear-gradient(145deg, #deb887, #d2b48c);
+            box-shadow: 
+                inset 0 1px 0 rgba(255, 255, 255, 0.4),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+                0 4px 12px rgba(139, 69, 19, 0.3);
+            border: 2px solid #8b4513;
+            color: #654321;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .copy-button:hover {
+            background: linear-gradient(145deg, #d2b48c, #deb887);
+            transform: translateY(-1px);
+        }
+
+        .loading-spinner {
+            border: 2px solid #8b4513;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            width: 1rem;
+            height: 1rem;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 0.5rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         @media (max-width: 640px) {
@@ -1572,15 +1726,40 @@ const statsPage = (username: string, stats: AuthorStats[]) => `<!DOCTYPE html>
                 <a href="/dashboard" class="text-amber-600 hover:text-amber-800 underline mt-2 inline-block">← Back to Dashboard</a>
             </div>
 
+            ${
+              userStats &&
+              !userStats.isPremium &&
+              userStats.historyCount >= 2000
+                ? `
+            <!-- Limited History Banner -->
+            <div class="limited-history-banner">
+                <div class="flex items-center gap-4">
+                    <div class="text-3xl">📚</div>
+                    <div class="flex-1">
+                        <h3 class="text-xl font-semibold text-amber-800 mb-2">Limited History View</h3>
+                        <p class="text-amber-700 mb-3">
+                            You're viewing stats from your first 2,000 posts. Upgrade to Premium to sync up to 100,000 historic posts 
+                            for a complete interaction analysis with everyone you've engaged with.
+                        </p>
+                        <a href="/pricing" class="upgrade-button">
+                            🚀 Upgrade to Premium
+                        </a>
+                    </div>
+                </div>
+            </div>
+            `
+                : ""
+            }
+
             <div class="papyrus-card p-6">
                 <h3 class="text-xl font-semibold mb-6 text-amber-800">Top Interactions by Post Count</h3>
                 <div class="author-grid">
                     ${stats
                       .map(
                         (author, index) => `
-                        <a href="/${username}?q=from:${encodeURIComponent(
+                        <div class="author-card" onclick="openModal('${encodeURIComponent(
                           author.username
-                        )}" class="author-card">
+                        )}')">
                             <div class="author-content">
                                 <div class="flex items-start gap-3 mb-3">
                                     <div class="text-lg font-bold text-amber-700 w-6 flex-shrink-0">#${
@@ -1646,7 +1825,7 @@ const statsPage = (username: string, stats: AuthorStats[]) => `<!DOCTYPE html>
                                     }
                                 </div>
                             </div>
-                        </a>
+                        </div>
                     `
                       )
                       .join("")}
@@ -1664,6 +1843,123 @@ const statsPage = (username: string, stats: AuthorStats[]) => `<!DOCTYPE html>
             </div>
         </div>
     </main>
+
+    <!-- Modal -->
+    <div id="modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="text-lg font-semibold text-amber-800">Conversations with <span id="modal-username"></span></h3>
+                <button class="close-button" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <textarea id="modal-text" class="modal-text" readonly></textarea>
+            </div>
+            <div class="modal-footer">
+                <div class="text-sm text-amber-600">
+                    <span id="loading-indicator" style="display: none;">
+                        <span class="loading-spinner"></span>Loading posts...
+                    </span>
+                    <span id="content-info" style="display: none;"></span>
+                </div>
+                <button class="copy-button" onclick="copyToClipboard()">
+                    📋 Copy to Clipboard
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentContent = '';
+
+        function openModal(username) {
+            const modal = document.getElementById('modal');
+            const modalUsername = document.getElementById('modal-username');
+            const modalText = document.getElementById('modal-text');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            const contentInfo = document.getElementById('content-info');
+            
+            modalUsername.textContent = '@' + decodeURIComponent(username);
+            modalText.value = '';
+            currentContent = '';
+            
+            // Show modal and loading
+            modal.style.display = 'flex';
+            loadingIndicator.style.display = 'inline';
+            contentInfo.style.display = 'none';
+            
+            // Fetch the posts
+            const query = 'from:' + decodeURIComponent(username);
+            const url = '/search?' + new URLSearchParams({
+                q: query,
+                username: '${username}',
+                maxTokens: '50000'
+            });
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch posts');
+                    }
+                    return response.text();
+                })
+                .then(content => {
+                    currentContent = content;
+                    modalText.value = content;
+                    
+                    // Hide loading and show content info
+                    loadingIndicator.style.display = 'none';
+                    contentInfo.style.display = 'inline';
+                    
+                    // Estimate content info
+                    const tokens = Math.round(content.length/5);
+                    contentInfo.textContent = \`\${tokens.toLocaleString()} tokens\`;
+                })
+                .catch(error => {
+                    console.error('Error fetching posts:', error);
+                    modalText.value = 'Error loading posts: ' + error.message;
+                    loadingIndicator.style.display = 'none';
+                    contentInfo.style.display = 'inline';
+                    contentInfo.textContent = 'Error occurred';
+                });
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('modal');
+            modal.style.display = 'none';
+        }
+
+        function copyToClipboard() {
+            if (currentContent) {
+                navigator.clipboard.writeText(currentContent).then(() => {
+                    const button = document.querySelector('.copy-button');
+                    const originalText = button.textContent;
+                    button.textContent = '✅ Copied!';
+                    setTimeout(() => {
+                        button.textContent = originalText;
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Failed to copy to clipboard:', err);
+                    // Fallback: select text
+                    const modalText = document.getElementById('modal-text');
+                    modalText.select();
+                });
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+    </script>
 </body>
 </html>`;
 
@@ -1738,6 +2034,63 @@ const dashboardPage = (
             padding: 1.5rem;
             margin: 1rem 0;
         }
+
+        .loading-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .5;
+            }
+        }
+
+        .warning-card {
+            background: rgba(252, 165, 165, 0.4);
+            border: 2px solid #dc2626;
+            border-radius: 0.75rem;
+            padding: 1rem;
+        }
+
+        .ai-logo {
+            width: 3rem;
+            height: 3rem;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            filter: drop-shadow(2px 2px 4px rgba(139, 69, 19, 0.2));
+            cursor: pointer;
+        }
+
+        .ai-logo:hover {
+            transform: scale(1.1) translateY(-2px);
+            filter: drop-shadow(4px 4px 8px rgba(139, 69, 19, 0.3));
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .instructions-card {
+            background: rgba(255, 255, 255, 0.5);
+            border: 2px solid #8b4513;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            margin-top: 1rem;
+        }
+
+        .code-block {
+            background: rgba(0, 0, 0, 0.8);
+            color: #10b981;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            overflow-x: auto;
+            margin: 0.5rem 0;
+        }
     </style>
 </head>
 <body class="text-amber-900">
@@ -1749,7 +2102,7 @@ const dashboardPage = (
                 <p class="text-lg text-amber-700">Nosce te ipsum per verba tua</p>
             </div>
 
-            <!-- User Info Card -->
+            <!-- User Info & Stats Card -->
             <div class="papyrus-card p-6 mb-6">
                 <div class="flex items-center gap-4 mb-4">
                     ${
@@ -1757,7 +2110,7 @@ const dashboardPage = (
                         ? `<img src="${user.profile_image_url}" alt="Profile" class="w-12 h-12 rounded-full border-2 border-amber-700">`
                         : ""
                     }
-                    <div>
+                    <div class="flex-1">
                         <h2 class="text-xl font-bold text-amber-800">${
                           user.name
                         }</h2>
@@ -1767,6 +2120,34 @@ const dashboardPage = (
                             ? '<span class="inline-block bg-amber-200 text-amber-800 px-2 py-1 rounded-full text-sm font-semibold">Premium</span>'
                             : ""
                         }
+                    </div>
+                    
+                    <!-- Stats in same card -->
+                    <div class="grid grid-cols-2 gap-4 text-center">
+                        <div>
+                            <div class="text-2xl font-bold text-amber-700">${
+                              stats.postCount
+                            }</div>
+                            <div class="text-sm text-amber-600">Posts</div>
+                        </div>
+                        <div>
+                            <div class="text-2xl font-bold text-amber-700 ${
+                              stats.scrapeStatus === "in_progress"
+                                ? "loading-pulse"
+                                : ""
+                            }">
+                                ${
+                                  stats.historyIsCompleted && stats.syncedFrom
+                                    ? "✓"
+                                    : stats.scrapeStatus === "in_progress"
+                                    ? "⟳"
+                                    : stats.scrapeStatus === "failed"
+                                    ? "✗"
+                                    : "○"
+                                }
+                            </div>
+                            <div class="text-sm text-amber-600">Status</div>
+                        </div>
                     </div>
                 </div>
                 
@@ -1803,40 +2184,128 @@ const dashboardPage = (
                 }
             </div>
 
-            <!-- Stats Card -->
+            ${
+              stats.historyCount >= stats.historyMaxCount && !stats.isPremium
+                ? `
+            <!-- Warning Card for non-premium users at limit -->
+            <div class="warning-card mb-6">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl">⚠️</span>
+                    <div>
+                        <h3 class="font-semibold text-red-800">Sync Limit Reached</h3>
+                        <p class="text-red-700">You've reached the free tier limit (${stats.historyMaxCount} historic posts). Upgrade to continue syncing up to 100,000 posts.</p>
+                        <a href="/pricing" class="text-red-800 underline font-semibold">Upgrade to Premium →</a>
+                    </div>
+                </div>
+            </div>
+            `
+                : ""
+            }
+
+            <!-- MCP Installation Card -->
             <div class="papyrus-card p-6 mb-6">
-                <h3 class="text-lg font-semibold mb-4 text-amber-800">Statistics</h3>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                    <div>
-                        <div class="text-2xl font-bold text-amber-700">${
-                          stats.postCount
-                        }</div>
-                        <div class="text-sm text-amber-600">Total Posts</div>
+                <h3 class="text-lg font-semibold mb-4 text-amber-800">Connect with Your AI Tools</h3>
+                <p class="text-amber-700 mb-4">Choose your AI tool to get installation instructions:</p>
+                
+                <div class="flex flex-wrap justify-center gap-6 mb-4">
+                    <img src="https://www.google.com/s2/favicons?domain=cursor.com&sz=64" 
+                         alt="Cursor" class="ai-logo" data-provider="cursor">
+                    <img src="https://www.google.com/s2/favicons?domain=code.visualstudio.com&sz=64" 
+                         alt="VS Code" class="ai-logo" data-provider="vscode">
+                    <img src="https://www.google.com/s2/favicons?domain=claude.ai&sz=64" 
+                         alt="Claude" class="ai-logo" data-provider="claude">
+                    <img src="https://www.google.com/s2/favicons?domain=codeium.com&sz=64" 
+                         alt="Windsurf" class="ai-logo" data-provider="windsurf">
+                    <img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=64" 
+                         alt="Gemini" class="ai-logo" data-provider="gemini">
+                    <img src="https://www.google.com/s2/favicons?domain=chatgpt.com&sz=64" 
+                         alt="ChatGPT" class="ai-logo bg-white p-2" data-provider="chatgpt">
+                </div>
+
+                <!-- Instructions for each provider (hidden by default) -->
+                <div id="cursor-instructions" class="instructions-card hidden">
+                    <h4 class="text-lg font-semibold text-amber-800 mb-3">Cursor Installation</h4>
+                    <p class="text-amber-700 mb-3">Add to <code>~/.cursor/mcp.json</code> or <code>.cursor/mcp.json</code> (project-specific)</p>
+                    <div class="code-block">
+{
+  "mcpServers": {
+    "X History MCP": {
+      "url": "https://grokthyself.com/mcp"
+    }
+  }
+}
                     </div>
-                    <div>
-                        <div class="text-2xl font-bold text-amber-700">${
-                          stats.historyCount
-                        }/${stats.historyMaxCount}</div>
-                        <div class="text-sm text-amber-600">Historic Posts</div>
+                    <a href="https://cursor.com/en/install-mcp?name=X%20History%20MCP&config=eyJ1cmwiOiJodHRwczovL2dyb2t0aHlzZWxmLmNvbS9tY3AifQ==" 
+                       class="papyrus-button inline-block mt-3" target="_blank">🔗 Install via deep link</a>
+                </div>
+
+                <div id="vscode-instructions" class="instructions-card hidden">
+                    <h4 class="text-lg font-semibold text-amber-800 mb-3">VS Code Installation</h4>
+                    <p class="text-amber-700 mb-3">Add to VS Code settings.json</p>
+                    <div class="code-block">
+{
+  "mcp": {
+    "servers": {
+      "X History MCP": {
+        "type": "http",
+        "url": "https://grokthyself.com/mcp"
+      }
+    }
+  }
+}
                     </div>
-                    <div>
-                        <div class="text-2xl font-bold text-amber-700">$${(
-                          stats.balance / 100
-                        ).toFixed(2)}</div>
-                        <div class="text-sm text-amber-600">Credits</div>
+                    <a href="https://insiders.vscode.dev/redirect/mcp/install?name=X%20History%20MCP&config=%7B%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fgrokthyself.com%2Fmcp%22%7D" 
+                       class="papyrus-button inline-block mt-3" target="_blank">🔗 Install via deep link</a>
+                </div>
+
+                <div id="claude-instructions" class="instructions-card hidden">
+                    <h4 class="text-lg font-semibold text-amber-800 mb-3">Claude Desktop / Claude.ai Installation</h4>
+                    <p class="text-amber-700 mb-3">Go to Settings → Connectors → Add Custom Connector and fill in:</p>
+                    <ul class="text-amber-700 mb-3 list-disc list-inside">
+                        <li><strong>Name:</strong> X History MCP</li>
+                        <li><strong>URL:</strong> https://grokthyself.com/mcp</li>
+                    </ul>
+                    <p class="text-sm text-amber-600">Note: If you are part of an organisation, you may not have access to custom connectors. Ask your org administrator.</p>
+                </div>
+
+                <div id="windsurf-instructions" class="instructions-card hidden">
+                    <h4 class="text-lg font-semibold text-amber-800 mb-3">Windsurf Installation</h4>
+                    <p class="text-amber-700 mb-3">Add to your Windsurf MCP configuration</p>
+                    <div class="code-block">
+{
+  "mcpServers": {
+    "X History MCP": {
+      "serverUrl": "https://grokthyself.com/mcp"
+    }
+  }
+}
                     </div>
-                    <div>
-                        <div class="text-2xl font-bold text-amber-700">${
-                          stats.historyIsCompleted && stats.syncedFrom
-                            ? "Complete"
-                            : stats.scrapeStatus === "in_progress"
-                            ? "Syncing"
-                            : stats.scrapeStatus === "failed"
-                            ? "Failed"
-                            : "Ready"
-                        }</div>
-                        <div class="text-sm text-amber-600">Status</div>
+                </div>
+
+                <div id="gemini-instructions" class="instructions-card hidden">
+                    <h4 class="text-lg font-semibold text-amber-800 mb-3">Gemini CLI Installation</h4>
+                    <p class="text-amber-700 mb-3">Add to <code>~/.gemini/settings.json</code></p>
+                    <div class="code-block">
+{
+  "mcpServers": {
+    "X History MCP": {
+      "httpUrl": "https://grokthyself.com/mcp"
+    }
+  }
+}
                     </div>
+                </div>
+
+                <div id="chatgpt-instructions" class="instructions-card hidden">
+                    <h4 class="text-lg font-semibold text-amber-800 mb-3">ChatGPT Installation</h4>
+                    <p class="text-amber-700 mb-3">First, go to 'Settings → Connectors → Advanced Settings' and turn on 'Developer Mode'.</p>
+                    <p class="text-amber-700 mb-3">Then, in connector settings click 'create'. Fill in:</p>
+                    <ul class="text-amber-700 mb-3 list-disc list-inside">
+                        <li><strong>Name:</strong> X History MCP</li>
+                        <li><strong>URL:</strong> https://grokthyself.com/mcp</li>
+                        <li><strong>Authentication:</strong> OAuth</li>
+                    </ul>
+                    <p class="text-sm text-amber-600">Note: Developer Mode must be enabled and this feature may not be available for everyone.</p>
                 </div>
             </div>
 
@@ -1873,17 +2342,13 @@ const dashboardPage = (
                 <h3 class="text-lg font-semibold mb-4 text-amber-800">Actions</h3>
                 <div class="grid md:grid-cols-2 gap-3">
                     <a href="/pricing" class="papyrus-button block text-center">Pricing</a>
-                    <span onclick="window.location.href='/${
+                    <span onclick="window.location.href='/stats?username=${
                       user.username
-                    }?maxTokens=10000&q='+(prompt('Search query (optional) - Supports keywords, from:username, before:YYYY-MM-DD, after:YYYY-MM-DD, AND/OR operators')||'')" class="papyrus-button block text-center cursor-pointer">Search Posts</span>
-                    <a href="/${
+                    }&maxTokens=10000&q='+(prompt('Search query (optional) - Supports keywords, from:username, before:YYYY-MM-DD, after:YYYY-MM-DD, AND/OR operators')||'')" class="papyrus-button block text-center cursor-pointer">Search Posts</span>
+                    <a href="/stats?username=${
                       user.username
-                    }/stats" class="papyrus-button block text-center">Stats</a>
-
-                    <a href="https://installthismcp.com/X%20History%20MCP?url=https%3A%2F%2Fgrokthyself.com%2Fmcp" class="papyrus-button block text-center">Install Your MCP</a>
-                    
+                    }" class="papyrus-button block text-center">Stats</a>
                     <a href="/logout" class="papyrus-button block text-center bg-red-200 hover:bg-red-300">Logout</a>
-
                 </div>
             </div>
         </div>
@@ -1902,6 +2367,36 @@ const dashboardPage = (
 
         publicCheck.addEventListener('change', updateSettings);
         featuredCheck.addEventListener('change', updateSettings);
+
+        // Handle provider selection for MCP instructions
+        const providers = document.querySelectorAll('.ai-logo[data-provider]');
+        const instructionCards = document.querySelectorAll('[id$="-instructions"]');
+
+        providers.forEach(provider => {
+            provider.addEventListener('click', () => {
+                const providerName = provider.getAttribute('data-provider');
+                const targetCard = document.getElementById(providerName + '-instructions');
+                
+                // Hide all instruction cards
+                instructionCards.forEach(card => {
+                    card.classList.add('hidden');
+                });
+                
+                // Show the selected card
+                if (targetCard) {
+                    targetCard.classList.remove('hidden');
+                    targetCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+
+                // Remove active state from all providers
+                providers.forEach(p => {
+                    p.style.border = '';
+                });
+
+                // Add active state to selected provider
+                provider.style.border = '3px solid #8b4513';
+            });
+        });
     </script>
 </body>
 </html>`;
@@ -2067,11 +2562,12 @@ export default {
           }
         }
 
-        if (url.pathname.endsWith("/stats")) {
-          const username = url.pathname.slice(1, -6); // Remove leading '/' and trailing '/stats'
+        if (url.pathname === "/stats") {
+          const username =
+            url.searchParams.get("username") || ctx.user?.username;
 
           if (!username) {
-            return new Response("Invalid username", { status: 400 });
+            return new Response("Unauthorized", { status: 401 });
           }
 
           try {
@@ -2081,12 +2577,80 @@ export default {
             );
 
             // Get author stats
+            const userStats = await userDO.getUserStats(ctx.user);
             const stats = await userDO.getAuthorStats(ctx.user?.username, 150);
-            const statsHtml = statsPage(username, stats);
 
-            return new Response(statsHtml, {
-              headers: { "Content-Type": "text/html;charset=utf8" },
-            });
+            // Determine response format based on Accept header
+            const acceptHeader = request.headers.get("accept") || "";
+            const prefersPlainText = acceptHeader.includes("text/plain");
+            const prefersMarkdown = acceptHeader.includes("text/markdown");
+            const prefersHtml = acceptHeader.includes("text/html");
+
+            // Return markdown if no accept header, or if plain/markdown is preferred over html
+            const shouldReturnMarkdown =
+              !acceptHeader ||
+              (prefersPlainText && !prefersHtml) ||
+              (prefersMarkdown && !prefersHtml) ||
+              (!prefersHtml && (prefersPlainText || prefersMarkdown));
+
+            if (shouldReturnMarkdown) {
+              // Generate markdown response
+              let markdown = `# Interaction Statistics - @${username}\n\n`;
+
+              if (
+                userStats &&
+                !userStats.isPremium &&
+                userStats.historyCount >= 2000
+              ) {
+                markdown += `## Limited History View\n\n`;
+                markdown += `You're viewing stats from your first 2,000 posts. Upgrade to Premium to sync up to 100,000 historic posts for a complete interaction analysis.\n\n`;
+                markdown += `[Upgrade to Premium →](https://grokthyself.com/pricing)\n\n`;
+              }
+
+              if (stats.length === 0) {
+                markdown += `No interaction data available yet.\n`;
+              } else {
+                markdown += `## Top Interactions by Post Count\n\n`;
+
+                stats.forEach((author, index) => {
+                  markdown += `### ${index + 1}. @${author.username}\n\n`;
+                  markdown += `**Name:** ${author.name}${
+                    author.isVerified ? " ✓" : ""
+                  }\n`;
+                  markdown += `**Posts:** ${author.postCount.toLocaleString()}\n`;
+                  markdown += `**Latest Post:** ${new Date(
+                    author.latestPostDate
+                  ).toLocaleDateString()}\n`;
+
+                  if (author.bio) {
+                    markdown += `**Bio:** ${author.bio}\n`;
+                  }
+
+                  if (author.location) {
+                    markdown += `**Location:** ${author.location}\n`;
+                  }
+
+                  if (author.url) {
+                    markdown += `**URL:** ${author.url}\n`;
+                  }
+
+                  markdown += `\n`;
+                });
+              }
+
+              return new Response(markdown, {
+                headers: {
+                  "Content-Type": "text/markdown; charset=utf-8",
+                  "Content-Disposition": `inline; filename="${username}-stats.md"`,
+                },
+              });
+            } else {
+              // Return HTML response
+              const statsHtml = statsPage(username, stats, userStats);
+              return new Response(statsHtml, {
+                headers: { "Content-Type": "text/html;charset=utf8" },
+              });
+            }
           } catch (error) {
             console.error("Stats page error:", error);
 
@@ -2104,83 +2668,81 @@ export default {
           }
         }
 
-        // assume its a username (or /search and authenticated)
+        if (url.pathname === "/search") {
+          // assume its a username (or /search and authenticated)
 
-        try {
-          // Get query parameters
-          const query = url.searchParams.get("q") || "";
-          const maxTokensParam = url.searchParams.get("maxTokens");
-          const maxTokens = maxTokensParam
-            ? parseInt(maxTokensParam, 10)
-            : 10000;
+          try {
+            // Get query parameters
+            const query = url.searchParams.get("q") || "";
+            const maxTokensParam = url.searchParams.get("maxTokens");
+            const maxTokens = maxTokensParam
+              ? parseInt(maxTokensParam, 10)
+              : 10000;
 
-          if (maxTokens < 1 || maxTokens > 5000000) {
+            if (maxTokens < 1 || maxTokens > 5000000) {
+              return new Response(
+                JSON.stringify({
+                  error: "maxTokens must be between 1 and 5000000",
+                }),
+                {
+                  status: 400,
+                  headers: { "Content-Type": "application/json" },
+                }
+              );
+            }
+
+            console.log(
+              `Posts search request: q="${query}", maxTokens=${maxTokens}`
+            );
+            const username =
+              url.searchParams.get("username") || ctx.user?.username;
+
+            if (!username) {
+              return new Response("Unauthorized", { status: 401 });
+            }
+
+            // Get user's Durable Object
+            const userDO = env.USER_DO.get(
+              env.USER_DO.idFromName(DO_NAME_PREFIX + username)
+            );
+
+            // Perform search
+            const markdown = await userDO.searchPosts(ctx.user?.username, {
+              q: query,
+              maxTokens,
+            });
+
+            // Return as markdown
+            return new Response(markdown, {
+              headers: {
+                "Content-Type": "text/markdown; charset=utf-8",
+                "Content-Disposition": `inline; filename="${username}.md"`,
+              },
+            });
+          } catch (error) {
+            console.error("Posts search error:", error);
             return new Response(
               JSON.stringify({
-                error: "maxTokens must be between 1 and 5000000",
+                error: "Error searching posts",
+                details: error instanceof Error ? error.message : String(error),
               }),
               {
-                status: 400,
+                status: 500,
                 headers: { "Content-Type": "application/json" },
               }
             );
           }
-
-          console.log(
-            `Posts search request: q="${query}", maxTokens=${maxTokens}`
-          );
-
-          const username =
-            url.pathname === "/search"
-              ? ctx.user?.username
-              : url.pathname.slice(1);
-
-          if (!username) {
-            return new Response("Unauthorized", { status: 401 });
-          }
-
-          // Get user's Durable Object
-          const userDO = env.USER_DO.get(
-            env.USER_DO.idFromName(DO_NAME_PREFIX + username)
-          );
-
-          // Perform search
-          const markdown = await userDO.searchPosts(ctx.user?.username, {
-            q: query,
-            maxTokens,
-          });
-
-          // Return as markdown
-          return new Response(markdown, {
-            headers: {
-              "Content-Type": "text/markdown; charset=utf-8",
-              "Content-Disposition": `inline; filename="${username}.md"`,
-            },
-          });
-        } catch (error) {
-          console.error("Posts search error:", error);
-          return new Response(
-            JSON.stringify({
-              error: "Error searching posts",
-              details: error instanceof Error ? error.message : String(error),
-            }),
-            {
-              status: 500,
-              headers: { "Content-Type": "application/json" },
-            }
-          );
         }
+
+        return new Response("Not found", { status: 404 });
       },
-      {
-        isLoginRequired: false,
-        scope: "profile",
-      }
+      { isLoginRequired: false, scope: "profile" }
     ),
     openapi,
     {
       authEndpoint: "/me",
-      toolOperationIds: ["search"],
-      serverInfo: { name: "X History MCP", version: "1.0.0" },
+      toolOperationIds: ["search", "stats"],
+      serverInfo: { name: "Grok Thyself", version: "1.0.1" },
     }
   ),
 } satisfies ExportedHandler<Env>;
@@ -2228,7 +2790,7 @@ async function handleStripeWebhook(
   const rawBodyString = new TextDecoder().decode(rawBody);
 
   const stripe = new Stripe(env.STRIPE_SECRET, {
-    apiVersion: "2025-03-31.basil",
+    apiVersion: "2025-09-30.clover",
   });
 
   const stripeSignature = request.headers.get("stripe-signature");

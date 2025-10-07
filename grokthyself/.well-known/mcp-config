@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://grokthyself.com/.well-known/mcp-config",
+  "title": "MCP Session Configuration",
+  "description": "Configuration for connecting to Grok Thyself",
+  "x-query-style": "dot+bracket",
+  "type": "object",
+  "properties": {
+    "username": {
+      "type": "string",
+      "title": "Username",
+      "description": "X Username to use this MCP with (defaults to logged in user)"
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}
