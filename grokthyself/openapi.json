@@ -3,7 +3,7 @@
   "info": {
     "title": "Grok Thyself API",
     "version": "1.0.0",
-    "description": "API for searching and retrieving X (Twitter) history data.\n\n- **search** - Most useful when looking for full details around past conversations\n- **stats** - Most useful to first get a high level overview of your top interactions.\n\nMost powerful usage pattern: first retrieve a high level overview of top interactions, then dive into more specific topics or people using one or several searches, to get a deep understanding of the most valuable interactions.\n\nTips:\n\n- use markdown tables to more nicely shape the answer to a prompt\n- If the user asks about things like retrieving followers, likes, bookmarks, dms, note that this isn't possible and explain what IS possible.\n- Always render markdown links to x.com/username for every username mentioned.",
+    "description": "API for searching and retrieving X (Twitter) history data",
     "contact": { "url": "https://grokthyself.com" }
   },
   "servers": [
@@ -15,7 +15,7 @@
       "get": {
         "operationId": "search",
         "summary": "Search user's posts",
-        "description": "Search through a user's X (Twitter) posts and return matching conversation threads in markdown format.",
+        "description": "Search through a user's X (Twitter) posts and return matching conversation threads in markdown format.\n\nMost useful when looking for full details around past conversations",
         "parameters": [
           {
             "name": "username",
@@ -132,7 +132,7 @@
       "get": {
         "operationId": "stats",
         "summary": "Get user interaction statistics",
-        "description": "Retrieve interaction statistics showing the most frequent authors the user has engaged with.",
+        "description": "Retrieve interaction statistics showing the most frequent authors the user has engaged with.\n\nMost useful to first get a high level overview of your top interactions.\n\nMost powerful usage pattern: first retrieve a high level overview of top interactions, then dive into more specific topics or people using one or several searches, to get a deep understanding of the most valuable interactions.\n\nTips:\n\n- use markdown tables to more nicely shape the answer to a prompt\n- If the user asks about things like retrieving followers, likes, bookmarks, dms, note that this isn't possible and explain what IS possible.\n- Always render markdown links to x.com/username for every username mentioned.",
         "parameters": [
           {
             "name": "username",
