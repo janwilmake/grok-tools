@@ -1,5 +1,0 @@
-.wrangler
-node_modules
-.git
-.env
-package-lock.json
