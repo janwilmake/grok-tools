@@ -1,15 +1,15 @@
 {
   "$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
-  "name": "grok-tools",
+  "name": "socialdatapod",
   "compatibility_date": "2025-10-01",
   "routes": [
     {
       "custom_domain": true,
-      "pattern": "grok-tools.com"
+      "pattern": "socialdatapod.com"
     },
     {
       "custom_domain": true,
-      "pattern": "www.grok-tools.com"
+      "pattern": "www.socialdatapod.com"
     }
   ],
   "dev": { "port": 3000 },
